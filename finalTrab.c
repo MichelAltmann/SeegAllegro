@@ -207,23 +207,92 @@ bool initializeAllegro(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
   return true;
 }
 
+void isHovering(struct text texts[], int mouse_x, int mouse_y, bool *hovering)
+{
+  for (size_t i = 0; i < 6; i++)
+  {
+    texts[i].hover = (mouse_x >= texts[i].x && mouse_x <= texts[i].x + texts[i].width &&
+                      mouse_y >= texts[i].y && mouse_y <= texts[i].y + texts[i].height);
+    if (texts[i].hover)
+    {
+      *hovering = true;
+    }
+  }
+}
+
+int mouseClick(struct text texts[], int mouse_x, int mouse_y)
+{
+  for (size_t i = 0; i < 6; i++)
+  {
+    if (mouse_x >= texts[i].x && mouse_x <= texts[i].x + texts[i].width &&
+        mouse_y >= texts[i].y && mouse_y <= texts[i].y + texts[i].height)
+    {
+      return texts[i].id;
+    }
+  }
+  return -1;
+}
+
+void mouseEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
+{
+  bool hovering = false;
+  int click = -1;
+  ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
+  al_register_event_source(event_queue, al_get_display_event_source(*display));
+  al_register_event_source(event_queue, al_get_mouse_event_source());
+
+  ALLEGRO_EVENT ev;
+  al_wait_for_event(event_queue, &ev);
+
+  if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
+  {
+    *running = false;
+  }
+  else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
+  {
+    int mouse_x = ev.mouse.x;
+    int mouse_y = ev.mouse.y;
+
+    isHovering(texts, mouse_x, mouse_y, &hovering);
+
+    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hovering)
+    {
+      switch (mouseClick(texts, mouse_x, mouse_y))
+      {
+      case 0:
+        printf("Player V.S Player\n");
+        break;
+      case 1:
+        printf("Player V.S Computer\n");
+        break;
+      case 2:
+        printf("Continue Last Game\n");
+        break;
+      case 3:
+        printf("History\n");
+        break;
+      case 4:
+        printf("Help\n");
+        break;
+      case 5:
+        *running = false;
+        break;
+      default:
+        break;
+      }
+    }
+  }
+  al_destroy_event_queue(event_queue);
+}
+
 void menu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
 {
-
-  // Text position and content
-  const char *text = "Click Me!";
-
   bool running = true;
-  bool hovering = false;
   struct tile board[5][5] = {0};
   struct text texts[6] = {0};
   initializeTiles(board);
 
   initializeTexts(texts, *font);
-
-  ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
-  al_register_event_source(event_queue, al_get_display_event_source(*display));
-  al_register_event_source(event_queue, al_get_mouse_event_source());
 
   while (running)
   {
@@ -233,33 +302,11 @@ void menu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
 
     al_flip_display();
 
-    ALLEGRO_EVENT ev;
-    al_wait_for_event(event_queue, &ev);
-
-    if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
-    {
-      running = false;
-    }
-    else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
-    {
-      int mouse_x = ev.mouse.x;
-      int mouse_y = ev.mouse.y;
-      int text_width = al_get_text_width(*font, text);
-      int text_height = al_get_font_line_height(*font);
-
-      // hovering = (mouse_x >= text_x && mouse_x <= text_x + text_width &&
-      //             mouse_y >= text_y && mouse_y <= text_y + text_height);
-
-      if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hovering)
-      {
-        running = false;
-      }
-    }
+    mouseEvents(texts, &running, display, font);
   }
 
   al_destroy_font(*font);
   al_destroy_display(*display);
-  al_destroy_event_queue(event_queue);
 }
 
 int main()
