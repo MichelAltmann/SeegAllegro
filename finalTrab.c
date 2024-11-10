@@ -59,7 +59,7 @@ void drawBoard(struct tile tile[5][5])
     {
       if (x == 0 || y == 0 || x == 6 || y == 6)
       {
-        al_draw_filled_rectangle(50 + x * TILE_SIZE, 50 + y * TILE_SIZE, 100 + x * TILE_SIZE, 100 + y * TILE_SIZE, al_map_rgb(150, 100, 50));
+        al_draw_filled_rectangle(225 + x * TILE_SIZE, 125 + y * TILE_SIZE, 275 + x * TILE_SIZE, 175 + y * TILE_SIZE, al_map_rgb(150, 100, 50));
       }
       else if (x > 0 && y > 0 && x < 6 && y < 6)
       {
@@ -78,15 +78,15 @@ void initializeTiles(struct tile tile[5][5])
     {
       if (x == 2 && y == 2)
       {
-        tile[x][y] = createTile(id, 100 + x * TILE_SIZE, 100 + y * TILE_SIZE, 150 + x * TILE_SIZE, 150 + y * TILE_SIZE, TILE3_COLOR, HOVER);
+        tile[x][y] = createTile(id, 275 + x * TILE_SIZE, 175 + y * TILE_SIZE, 325 + x * TILE_SIZE, 225 + y * TILE_SIZE, TILE3_COLOR, HOVER);
       }
       else if ((x % 2 == 0 && y % 2 == 0) || (x % 2 != 0 && y % 2 != 0))
       {
-        tile[x][y] = createTile(id, 100 + x * TILE_SIZE, 100 + y * TILE_SIZE, 150 + x * TILE_SIZE, 150 + y * TILE_SIZE, TILE1_COLOR, HOVER);
+        tile[x][y] = createTile(id, 275 + x * TILE_SIZE, 175 + y * TILE_SIZE, 325 + x * TILE_SIZE, 225 + y * TILE_SIZE, TILE1_COLOR, HOVER);
       }
       else
       {
-        tile[x][y] = createTile(id, 100 + x * TILE_SIZE, 100 + y * TILE_SIZE, 150 + x * TILE_SIZE, 150 + y * TILE_SIZE, TILE2_COLOR, HOVER);
+        tile[x][y] = createTile(id, 275 + x * TILE_SIZE, 175 + y * TILE_SIZE, 325 + x * TILE_SIZE, 225 + y * TILE_SIZE, TILE2_COLOR, HOVER);
       }
       id++;
     }
@@ -207,7 +207,26 @@ bool initializeAllegro(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
   return true;
 }
 
-void isHovering(struct text texts[], int mouse_x, int mouse_y, bool *hovering)
+void handleEvents(struct text texts[], bool *running, struct tile board[5][5], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font);
+void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct tile board[5][5]);
+
+void isHoveringTile(struct tile board[5][5], int mouse_x, int mouse_y, bool *hoveringTile)
+{
+  for (size_t i = 0; i < 5; i++)
+  {
+    for (size_t j = 0; j < 5; j++)
+    {
+      board[i][j].hover = (mouse_x > board[i][j].x1 && mouse_x < board[i][j].x2 &&
+                           mouse_y > board[i][j].y1 && mouse_y < board[i][j].y2);
+      if (board[i][j].hover)
+      {
+        *hoveringTile = true;
+      }
+    }
+  }
+}
+
+void isHoveringText(struct text texts[], int mouse_x, int mouse_y, bool *hoveringText)
 {
   for (size_t i = 0; i < 6; i++)
   {
@@ -215,12 +234,12 @@ void isHovering(struct text texts[], int mouse_x, int mouse_y, bool *hovering)
                       mouse_y >= texts[i].y && mouse_y <= texts[i].y + texts[i].height);
     if (texts[i].hover)
     {
-      *hovering = true;
+      *hoveringText = true;
     }
   }
 }
 
-int mouseClick(struct text texts[], int mouse_x, int mouse_y)
+int mouseClickText(struct text texts[], int mouse_x, int mouse_y)
 {
   for (size_t i = 0; i < 6; i++)
   {
@@ -233,10 +252,54 @@ int mouseClick(struct text texts[], int mouse_x, int mouse_y)
   return -1;
 }
 
-void mouseEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
+void onMouseClick(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct tile board[5][5], struct text texts[], int mouse_x, int mouse_y, bool *running)
 {
-  bool hovering = false;
-  int click = -1;
+  switch (mouseClickText(texts, mouse_x, mouse_y))
+  {
+  case 0:
+    startGame(display, font, board);
+    break;
+  case 1:
+    printf("Player V.S Computer\n");
+    break;
+  case 2:
+    printf("Continue Last Game\n");
+    break;
+  case 3:
+    printf("History\n");
+    break;
+  case 4:
+    printf("Help\n");
+    break;
+  case 5:
+    *running = false;
+    break;
+  default:
+    break;
+  }
+}
+
+void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct tile board[5][5])
+{
+  bool running = true;
+  struct text texts[6] = {0}; // Assuming texts are needed for event handling
+
+  while (running)
+  {
+    al_clear_to_color(al_map_rgb(255, 255, 255));
+
+    drawBoard(board);
+
+    al_flip_display();
+
+    handleEvents(texts, &running, board, display, font);
+  }
+}
+
+void handleEvents(struct text texts[], bool *running, struct tile board[5][5], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
+{
+  bool hoveringTile = false;
+  bool hoveringText = false;
   ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
   al_register_event_source(event_queue, al_get_display_event_source(*display));
   al_register_event_source(event_queue, al_get_mouse_event_source());
@@ -246,50 +309,38 @@ void mouseEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, 
 
   if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
   {
-    *running = false;
+    al_destroy_display(*display);
   }
   else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
   {
     int mouse_x = ev.mouse.x;
     int mouse_y = ev.mouse.y;
-
-    isHovering(texts, mouse_x, mouse_y, &hovering);
-
-    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hovering)
+    isHoveringText(texts, mouse_x, mouse_y, &hoveringText);
+    isHoveringTile(board, mouse_x, mouse_y, &hoveringTile);
+    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
     {
-      switch (mouseClick(texts, mouse_x, mouse_y))
-      {
-      case 0:
-        printf("Player V.S Player\n");
-        break;
-      case 1:
-        printf("Player V.S Computer\n");
-        break;
-      case 2:
-        printf("Continue Last Game\n");
-        break;
-      case 3:
-        printf("History\n");
-        break;
-      case 4:
-        printf("Help\n");
-        break;
-      case 5:
-        *running = false;
-        break;
-      default:
-        break;
-      }
+      printf("Mouse click on text\n");
+      onMouseClick(display, font, board, texts, mouse_x, mouse_y, running);
     }
+    else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES && hoveringTile)
+    {
+      // onTileClick(board, mouse_x, mouse_y);
+    }
+    al_destroy_event_queue(event_queue);
   }
-  al_destroy_event_queue(event_queue);
+}
+
+void mouseEvents(struct text texts[], bool *running, struct tile board[5][5], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
+{
+  handleEvents(texts, running, board, display, font);
 }
 
 void menu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
 {
   bool running = true;
-  struct tile board[5][5] = {0};
   struct text texts[6] = {0};
+
+  struct tile board[5][5] = {0};
   initializeTiles(board);
 
   initializeTexts(texts, *font);
@@ -302,7 +353,7 @@ void menu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
 
     al_flip_display();
 
-    mouseEvents(texts, &running, display, font);
+    mouseEvents(texts, &running, board, display, font);
   }
 
   al_destroy_font(*font);
@@ -314,7 +365,6 @@ int main()
   ALLEGRO_DISPLAY *display = NULL;
   ALLEGRO_FONT *font = NULL;
   initializeAllegro(&display, &font);
-
   menu(&display, &font);
   return 0;
 }
