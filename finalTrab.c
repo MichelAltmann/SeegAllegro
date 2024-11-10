@@ -25,6 +25,7 @@ struct tile
   bool click;
   int piece;
 };
+
 struct tile createTile(int id, int x1, int y1, int x2, int y2, ALLEGRO_COLOR color, ALLEGRO_COLOR colorHover)
 {
   struct tile t;
@@ -142,7 +143,7 @@ struct text createText(int id, int y, const char *text, ALLEGRO_COLOR color, ALL
   return t;
 }
 
-void initializeTexts(struct text texts[6], ALLEGRO_FONT *font)
+void initializeMenuTexts(struct text texts[6], ALLEGRO_FONT *font)
 {
   texts[0] = createText(0, 100, "Player V.S Player", al_map_rgb(0, 0, 0), HOVER, font);
   texts[1] = createText(1, 150, "Player V.S Computer", al_map_rgb(0, 0, 0), HOVER, font);
@@ -217,7 +218,7 @@ bool initializeAllegro(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
   return true;
 }
 
-void handleEvents(struct text texts[], bool *running, struct tile board[5][5], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font);
+int handleEvents(struct text texts[], bool *running, struct tile board[5][5], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, int *round);
 void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct tile board[5][5]);
 
 void isHoveringTile(struct tile board[5][5], int mouse_x, int mouse_y, bool *hoveringTile)
@@ -253,18 +254,31 @@ int mouseClickTile(struct tile board[5][5], int mouse_x, int mouse_y)
   return -1;
 }
 
-void onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mouse_x, int mouse_y, bool *running)
+bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mouse_x, int mouse_y, bool *running, int *round)
 {
   for (size_t i = 0; i < 5; i++)
   {
     for (size_t j = 0; j < 5; j++)
     {
-      if (board[i][j].id == mouseClickTile(board, mouse_x, mouse_y))
+      if (board[i][j].id == mouseClickTile(board, mouse_x, mouse_y) && board[i][j].id != 12 && board[i][j].piece == 0)
       {
-        board[i][j].piece = 1;
+        if (round != 0)
+        {
+          if (*round % 2 == 0)
+          {
+            board[i][j].piece = 1;
+            return true;
+          }
+          else
+          {
+            board[i][j].piece = 2;
+            return true;
+          }
+        }
       }
     }
   }
+  return false;
 }
 
 void isHoveringText(struct text texts[], int mouse_x, int mouse_y, bool *hoveringText)
@@ -323,7 +337,9 @@ void onMouseClickText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct til
 void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct tile board[5][5])
 {
   bool running = true;
-  struct text texts[6] = {0}; // Assuming texts are needed for event handling
+  struct text texts[6] = {0};
+  int round = 0;
+  int pieces = 0;
 
   while (running)
   {
@@ -333,11 +349,19 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct tile board
 
     al_flip_display();
 
-    handleEvents(texts, &running, board, display, font);
+    if (handleEvents(texts, &running, board, display, font, &round) == 1)
+    {
+      pieces++;
+      if (pieces % 2 == 0 && pieces != 0)
+      {
+        round++;
+      }
+    }
+    printf("Round: %d\n", round);
   }
 }
 
-void handleEvents(struct text texts[], bool *running, struct tile board[5][5], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
+int handleEvents(struct text texts[], bool *running, struct tile board[5][5], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, int *round)
 {
   bool hoveringTile = false;
   bool hoveringText = false;
@@ -362,18 +386,23 @@ void handleEvents(struct text texts[], bool *running, struct tile board[5][5], A
     {
       printf("Mouse click on text\n");
       onMouseClickText(display, font, board, texts, mouse_x, mouse_y, running);
+      return 0;
     }
     else if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringTile)
     {
-      onMouseClickTile(display, board, mouse_x, mouse_y, running);
+      if (onMouseClickTile(display, board, mouse_x, mouse_y, running, round))
+      {
+        return 1;
+      }
     }
     al_destroy_event_queue(event_queue);
   }
+  return -1;
 }
 
 void mouseEvents(struct text texts[], bool *running, struct tile board[5][5], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
 {
-  handleEvents(texts, running, board, display, font);
+  handleEvents(texts, running, board, display, font, 0);
 }
 
 void menu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
@@ -384,7 +413,7 @@ void menu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
   struct tile board[5][5] = {0};
   initializeTiles(board);
 
-  initializeTexts(texts, *font);
+  initializeMenuTexts(texts, *font);
 
   while (running)
   {
