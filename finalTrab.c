@@ -23,6 +23,7 @@ struct tile
   ALLEGRO_COLOR colorHover;
   bool hover;
   bool click;
+  int piece;
 };
 struct tile createTile(int id, int x1, int y1, int x2, int y2, ALLEGRO_COLOR color, ALLEGRO_COLOR colorHover)
 {
@@ -36,6 +37,7 @@ struct tile createTile(int id, int x1, int y1, int x2, int y2, ALLEGRO_COLOR col
   t.colorHover = colorHover;
   t.hover = false;
   t.click = false;
+  t.piece = 0;
   return t;
 }
 
@@ -64,6 +66,14 @@ void drawBoard(struct tile tile[5][5])
       else if (x > 0 && y > 0 && x < 6 && y < 6)
       {
         drawTile(tile[x - 1][y - 1]);
+        if (tile[x - 1][y - 1].piece == 1)
+        {
+          al_draw_filled_circle(250 + x * TILE_SIZE, 150 + y * TILE_SIZE, 20, al_map_rgb(200, 0, 0));
+        }
+        else if (tile[x - 1][y - 1].piece == 2)
+        {
+          al_draw_filled_circle(250 + x * TILE_SIZE, 150 + y * TILE_SIZE, 20, al_map_rgb(0, 0, 200));
+        }
       }
     }
   }
@@ -226,6 +236,37 @@ void isHoveringTile(struct tile board[5][5], int mouse_x, int mouse_y, bool *hov
   }
 }
 
+int mouseClickTile(struct tile board[5][5], int mouse_x, int mouse_y)
+{
+  for (size_t i = 0; i < 5; i++)
+  {
+    for (size_t j = 0; j < 5; j++)
+    {
+      board[i][j].click = (mouse_x > board[i][j].x1 && mouse_x < board[i][j].x2 &&
+                           mouse_y > board[i][j].y1 && mouse_y < board[i][j].y2);
+      if (board[i][j].click)
+      {
+        return board[i][j].id;
+      }
+    }
+  }
+  return -1;
+}
+
+void onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mouse_x, int mouse_y, bool *running)
+{
+  for (size_t i = 0; i < 5; i++)
+  {
+    for (size_t j = 0; j < 5; j++)
+    {
+      if (board[i][j].id == mouseClickTile(board, mouse_x, mouse_y))
+      {
+        board[i][j].piece = 1;
+      }
+    }
+  }
+}
+
 void isHoveringText(struct text texts[], int mouse_x, int mouse_y, bool *hoveringText)
 {
   for (size_t i = 0; i < 6; i++)
@@ -252,7 +293,7 @@ int mouseClickText(struct text texts[], int mouse_x, int mouse_y)
   return -1;
 }
 
-void onMouseClick(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct tile board[5][5], struct text texts[], int mouse_x, int mouse_y, bool *running)
+void onMouseClickText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct tile board[5][5], struct text texts[], int mouse_x, int mouse_y, bool *running)
 {
   switch (mouseClickText(texts, mouse_x, mouse_y))
   {
@@ -320,11 +361,11 @@ void handleEvents(struct text texts[], bool *running, struct tile board[5][5], A
     if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
     {
       printf("Mouse click on text\n");
-      onMouseClick(display, font, board, texts, mouse_x, mouse_y, running);
+      onMouseClickText(display, font, board, texts, mouse_x, mouse_y, running);
     }
-    else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES && hoveringTile)
+    else if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringTile)
     {
-      // onTileClick(board, mouse_x, mouse_y);
+      onMouseClickTile(display, board, mouse_x, mouse_y, running);
     }
     al_destroy_event_queue(event_queue);
   }
