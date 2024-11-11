@@ -1,0 +1,3 @@
+g++ -I C:\allegro\include -c finalTrab.c
+g++.exe -I C:\allegro\include finalTrab.o -o finalTrab.exe liballegro_monolith.dll.a
+finalTrab.exe

@@ -8,6 +8,10 @@
 #define SCREEN_WIDTH 800
 #define SCREEN_HEIGHT 600
 #define TILE_SIZE 50
+#define CENTER_BOARD_X (SCREEN_WIDTH / 2) - (TILE_SIZE * 5 / 2)
+#define CENTER_BOARD_Y (SCREEN_HEIGHT / 2) - (TILE_SIZE * 5 / 2)
+#define TILE_END_X CENTER_BOARD_X + TILE_SIZE
+#define TILE_END_Y CENTER_BOARD_Y + TILE_SIZE
 #define TILE1_COLOR al_map_rgb(0, 0, 0)
 #define TILE2_COLOR al_map_rgb(100, 100, 100)
 #define TILE3_COLOR al_map_rgb(255, 122, 255)
@@ -62,18 +66,18 @@ void drawBoard(struct tile tile[5][5])
     {
       if (x == 0 || y == 0 || x == 6 || y == 6)
       {
-        al_draw_filled_rectangle(225 + x * TILE_SIZE, 125 + y * TILE_SIZE, 275 + x * TILE_SIZE, 175 + y * TILE_SIZE, al_map_rgb(150, 100, 50));
+        al_draw_filled_rectangle((CENTER_BOARD_X - TILE_SIZE) + x * TILE_SIZE, (CENTER_BOARD_Y - TILE_SIZE) + y * TILE_SIZE, (TILE_END_X - TILE_SIZE) + x * TILE_SIZE, (TILE_END_Y - TILE_SIZE) + y * TILE_SIZE, al_map_rgb(150, 100, 50));
       }
       else if (x > 0 && y > 0 && x < 6 && y < 6)
       {
         drawTile(tile[x - 1][y - 1]);
         if (tile[x - 1][y - 1].piece == 1)
         {
-          al_draw_filled_circle(250 + x * TILE_SIZE, 150 + y * TILE_SIZE, 20, al_map_rgb(200, 0, 0));
+          al_draw_filled_circle((CENTER_BOARD_X - (TILE_SIZE / 2)) + x * TILE_SIZE, (CENTER_BOARD_Y - (TILE_SIZE / 2)) + y * TILE_SIZE, TILE_SIZE / 3, al_map_rgb(200, 0, 0));
         }
         else if (tile[x - 1][y - 1].piece == 2)
         {
-          al_draw_filled_circle(250 + x * TILE_SIZE, 150 + y * TILE_SIZE, 20, al_map_rgb(0, 0, 200));
+          al_draw_filled_circle((CENTER_BOARD_X - (TILE_SIZE / 2)) + x * TILE_SIZE, (CENTER_BOARD_Y - (TILE_SIZE / 2)) + y * TILE_SIZE, TILE_SIZE / 3, al_map_rgb(0, 0, 200));
         }
       }
     }
@@ -89,15 +93,15 @@ void initializeTiles(struct tile tile[5][5])
     {
       if (x == 2 && y == 2)
       {
-        tile[x][y] = createTile(id, 275 + x * TILE_SIZE, 175 + y * TILE_SIZE, 325 + x * TILE_SIZE, 225 + y * TILE_SIZE, TILE3_COLOR, HOVER);
+        tile[x][y] = createTile(id, CENTER_BOARD_X + x * TILE_SIZE, CENTER_BOARD_Y + y * TILE_SIZE, TILE_END_X + x * TILE_SIZE, TILE_END_Y + y * TILE_SIZE, TILE3_COLOR, HOVER);
       }
       else if ((x % 2 == 0 && y % 2 == 0) || (x % 2 != 0 && y % 2 != 0))
       {
-        tile[x][y] = createTile(id, 275 + x * TILE_SIZE, 175 + y * TILE_SIZE, 325 + x * TILE_SIZE, 225 + y * TILE_SIZE, TILE1_COLOR, HOVER);
+        tile[x][y] = createTile(id, CENTER_BOARD_X + x * TILE_SIZE, CENTER_BOARD_Y + y * TILE_SIZE, TILE_END_X + x * TILE_SIZE, TILE_END_Y + y * TILE_SIZE, TILE1_COLOR, HOVER);
       }
       else
       {
-        tile[x][y] = createTile(id, 275 + x * TILE_SIZE, 175 + y * TILE_SIZE, 325 + x * TILE_SIZE, 225 + y * TILE_SIZE, TILE2_COLOR, HOVER);
+        tile[x][y] = createTile(id, CENTER_BOARD_X + x * TILE_SIZE, CENTER_BOARD_Y + y * TILE_SIZE, TILE_END_X + x * TILE_SIZE, TILE_END_Y + y * TILE_SIZE, TILE2_COLOR, HOVER);
       }
       id++;
     }
@@ -434,6 +438,7 @@ int main()
 {
   ALLEGRO_DISPLAY *display = NULL;
   ALLEGRO_FONT *font = NULL;
+  printf("%d %d %d %d", CENTER_BOARD_X, CENTER_BOARD_Y, TILE_END_X, TILE_END_Y);
   initializeAllegro(&display, &font);
   menu(&display, &font);
   return 0;
