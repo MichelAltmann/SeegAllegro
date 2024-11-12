@@ -27,6 +27,7 @@ struct tile
   ALLEGRO_COLOR colorHover;
   bool hover;
   bool click;
+  bool positionable;
   int piece;
 };
 
@@ -42,6 +43,7 @@ struct tile createTile(int id, int x1, int y1, int x2, int y2, ALLEGRO_COLOR col
   t.colorHover = colorHover;
   t.hover = false;
   t.click = false;
+  t.positionable = false;
   t.piece = 0;
   return t;
 }
@@ -51,6 +53,10 @@ void drawTile(struct tile tile)
   if (tile.hover)
   {
     al_draw_filled_rectangle(tile.x1, tile.y1, tile.x2, tile.y2, tile.colorHover);
+  }
+  else if (tile.positionable)
+  {
+    al_draw_filled_rectangle(tile.x1, tile.y1, tile.x2, tile.y2, al_map_rgba(0, 255, 0, 100));
   }
   else
   {
@@ -241,6 +247,17 @@ void isHoveringTile(struct tile board[5][5], int mouse_x, int mouse_y, bool *hov
   }
 }
 
+void clearPositionable(struct tile board[5][5])
+{
+  for (size_t i = 0; i < 5; i++)
+  {
+    for (size_t j = 0; j < 5; j++)
+    {
+      board[i][j].positionable = false;
+    }
+  }
+}
+
 int mouseClickTile(struct tile board[5][5], int mouse_x, int mouse_y)
 {
   for (size_t i = 0; i < 5; i++)
@@ -251,6 +268,7 @@ int mouseClickTile(struct tile board[5][5], int mouse_x, int mouse_y)
                            mouse_y > board[i][j].y1 && mouse_y < board[i][j].y2);
       if (board[i][j].click)
       {
+        board[i][j].click = false;
         return board[i][j].id;
       }
     }
@@ -258,27 +276,59 @@ int mouseClickTile(struct tile board[5][5], int mouse_x, int mouse_y)
   return -1;
 }
 
-bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mouse_x, int mouse_y, bool *running, int *round)
+void putPiece(struct tile board[5][5], int i, int j, int *turn)
+{
+  if (turn != 0)
+  {
+    if (*turn % 2 == 0)
+    {
+      board[i][j].piece = 1;
+    }
+    else
+    {
+      board[i][j].piece = 2;
+    }
+  }
+}
+
+void checkPossibilities(struct tile board[5][5], int i, int j)
+{
+  bool tileUp = (j - 1 >= 0 && board[i][j - 1].piece == 0);
+  bool tileDown = (j + 1 < 5 && board[i][j + 1].piece == 0);
+  bool tileLeft = (i - 1 >= 0 && board[i - 1][j].piece == 0);
+  bool tileRight = (i + 1 < 5 && board[i + 1][j].piece == 0);
+
+  if (tileUp || tileDown || tileLeft || tileRight)
+  {
+    printf("Possibilities: ");
+    clearPositionable(board);
+    board[i + 1][j].positionable = tileRight;
+    board[i - 1][j].positionable = tileLeft;
+    board[i][j + 1].positionable = tileDown;
+    board[i][j - 1].positionable = tileUp;
+    printf("\n");
+  }
+  else
+  {
+    printf("No possibilities\n");
+    clearPositionable(board);
+  }
+}
+
+bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mouse_x, int mouse_y, bool *running, int *turn)
 {
   for (size_t i = 0; i < 5; i++)
   {
     for (size_t j = 0; j < 5; j++)
     {
-      if (board[i][j].id == mouseClickTile(board, mouse_x, mouse_y) && board[i][j].id != 12 && board[i][j].piece == 0)
+      if (board[i][j].id == mouseClickTile(board, mouse_x, mouse_y) && board[i][j].id != 12 && board[i][j].piece == 0 && *turn < 12)
       {
-        if (round != 0)
-        {
-          if (*round % 2 == 0)
-          {
-            board[i][j].piece = 1;
-            return true;
-          }
-          else
-          {
-            board[i][j].piece = 2;
-            return true;
-          }
-        }
+        putPiece(board, i, j, turn);
+        return true;
+      }
+      else if (board[i][j].id == mouseClickTile(board, mouse_x, mouse_y) && board[i][j].piece > 0 && *turn >= 12)
+      {
+        checkPossibilities(board, i, j);
       }
     }
   }
@@ -342,7 +392,8 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct tile board
 {
   bool running = true;
   struct text texts[6] = {0};
-  int round = 0;
+  struct tile selectedTile = {0};
+  int turn = 0;
   int pieces = 0;
 
   while (running)
@@ -351,17 +402,19 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct tile board
 
     drawBoard(board);
 
+    al_draw_text(*font, al_map_rgb(0, 0, 0), 10, 10, 0, "Turn: ");
+    al_draw_textf(*font, turn % 2 == 0 ? al_map_rgb(200, 0, 0) : al_map_rgb(0, 0, 200), 100, 10, 0, "%s", turn % 2 == 0 ? "Player 1" : "Player 2");
+
     al_flip_display();
 
-    if (handleEvents(texts, &running, board, display, font, &round) == 1)
+    if (handleEvents(texts, &running, board, display, font, &turn) == 1)
     {
       pieces++;
       if (pieces % 2 == 0 && pieces != 0)
       {
-        round++;
+        turn++;
       }
     }
-    printf("Round: %d\n", round);
   }
 }
 
