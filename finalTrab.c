@@ -351,7 +351,12 @@ bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mo
           putPiece(board, i, j, turn);
           return true;
         }
-        else if (board[i][j].piece > 0 && *turn >= 12)
+        else if (board[i][j].piece == 1 && *turn >= 12 && *turn % 2 == 0)
+        {
+          checkPossibilities(board, i, j);
+          *selectedTile = board[i][j];
+        }
+        else if (board[i][j].piece == 2 && *turn >= 12 && *turn % 2 != 0)
         {
           checkPossibilities(board, i, j);
           *selectedTile = board[i][j];
@@ -472,8 +477,10 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
     if (handleGameEvents(texts, &running, display, board, font, &turn, &selectedTile) == 1)
     {
       pieces++;
-      if (pieces % 2 == 0 && pieces != 0)
+      if (pieces % 2 == 0 && pieces != 0 && pieces < 24)
       {
+        turn++;
+      } else if (pieces >= 24) {
         turn++;
       }
     }
