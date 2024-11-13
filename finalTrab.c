@@ -241,7 +241,7 @@ bool initializeAllegro(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
 }
 
 int handleMenuEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font);
-int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, struct tile board[5][5], ALLEGRO_FONT **font, int *round, struct tile *selectedTile);
+int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, struct tile board[5][5], ALLEGRO_FONT **font, int *round, struct tile *selectedTile, bool hasPossibilities);
 void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font);
 
 void isHoveringTile(struct tile board[5][5], int mouse_x, int mouse_y, bool *hoveringTile)
@@ -304,30 +304,124 @@ void putPiece(struct tile board[5][5], int i, int j, int *turn)
   }
 }
 
-bool checkPossibilities(struct tile board[5][5], int i, int j)
+bool checkTilePossibilities(struct tile board[5][5], int i, int j, bool *tileUp, bool *tileDown, bool *tileLeft, bool *tileRight)
 {
-  bool tileUp = (j - 1 >= 0 && board[i][j - 1].piece == 0);
-  bool tileDown = (j + 1 < 5 && board[i][j + 1].piece == 0);
-  bool tileLeft = (i - 1 >= 0 && board[i - 1][j].piece == 0);
-  bool tileRight = (i + 1 < 5 && board[i + 1][j].piece == 0);
-
-  if (tileUp || tileDown || tileLeft || tileRight)
+  if (j - 1 >= 0)
   {
-    printf("Possibilities: ");
-    clearPositionable(board);
-    board[i + 1][j].positionable = tileRight;
-    board[i - 1][j].positionable = tileLeft;
-    board[i][j + 1].positionable = tileDown;
-    board[i][j - 1].positionable = tileUp;
-    printf("\n");
-    return true;
+    *tileUp = (board[i][j - 1].piece == 0);
+  }
+  else
+  {
+    *tileUp = false;
+  }
+  if (j + 1 < 5)
+  {
+    *tileDown = (board[i][j + 1].piece == 0);
+  }
+  else
+  {
+    *tileDown = false;
+  }
+  if (i + 1 < 5)
+  {
+    *tileRight = (board[i + 1][j].piece == 0);
+  }
+  else
+  {
+    *tileRight = false;
+  }
+  if (i - 1 >= 0)
+  {
+    *tileLeft = (board[i - 1][j].piece == 0);
+  }
+  else
+  {
+    *tileLeft = false;
+  }
+
+  return (*tileUp || *tileDown || *tileLeft || *tileRight);
+}
+
+bool isValidPosition(int x, int y, struct tile board[5][5], int piece)
+{
+  return (x >= 0 && x < 5 && y >= 0 && y < 5) && (board[x][y].piece != piece);
+}
+
+void setTilePossibility(struct tile board[5][5], int i, int j, bool hasPossibilities)
+{
+  bool tileUp, tileDown, tileLeft, tileRight;
+  clearPositionable(board);
+  if (checkTilePossibilities(board, i, j, &tileUp, &tileDown, &tileLeft, &tileRight) && hasPossibilities)
+  {
+    if (j - 1 >= 0)
+    {
+      board[i][j - 1].positionable = tileUp;
+    }
+    if (j + 1 < 5)
+    {
+      board[i][j + 1].positionable = tileDown;
+    }
+    if (i - 1 >= 0)
+    {
+      board[i - 1][j].positionable = tileLeft;
+    }
+    if (i + 1 < 5)
+    {
+      board[i + 1][j].positionable = tileRight;
+    }
+  }
+  else if (!hasPossibilities)
+  {
+    int piece = board[i][j].piece;
+    if (j - 1 >= 0)
+    {
+      board[i][j - 1].positionable = isValidPosition(i, j - 1, board, piece);
+    }
+    if (j + 1 < 5)
+    {
+      board[i][j + 1].positionable = isValidPosition(i, j + 1, board, piece);
+    }
+    if (i - 1 >= 0)
+    {
+      board[i - 1][j].positionable = isValidPosition(i - 1, j, board, piece);
+    }
+    if (i + 1 < 5)
+    {
+      board[i + 1][j].positionable = isValidPosition(i + 1, j, board, piece);
+    }
   }
   else
   {
     printf("No possibilities\n");
     clearPositionable(board);
-    return false;
   }
+}
+
+bool checkPossibilities(struct tile board[5][5], int turn)
+{
+  bool tileUp, tileDown, tileLeft, tileRight;
+  int possibilities = 0;
+  for (int i = 0; i < 5; i++)
+  {
+    for (int j = 0; j < 5; j++)
+    {
+      if (board[i][j].piece == 1 && turn % 2 == 0 && turn >= 12)
+      {
+        if (checkTilePossibilities(board, i, j, &tileUp, &tileDown, &tileLeft, &tileRight))
+        {
+          possibilities++;
+        }
+      }
+      else if (board[i][j].piece == 2 && turn % 2 != 0 && turn >= 12)
+      {
+        if (checkTilePossibilities(board, i, j, &tileUp, &tileDown, &tileLeft, &tileRight))
+        {
+          possibilities++;
+        }
+      }
+    }
+  }
+  return possibilities > 0;
 }
 
 void movePiece(struct tile board[5][5], int x, int y, struct tile *selectedTile)
@@ -338,13 +432,14 @@ void movePiece(struct tile board[5][5], int x, int y, struct tile *selectedTile)
   clearPositionable(board);
 }
 
-bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mouse_x, int mouse_y, bool *running, int *turn, struct tile *selectedTile)
+bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mouse_x, int mouse_y, bool *running, int *turn, struct tile *selectedTile, bool hasPossibilities)
 {
+  int clickedTileId = mouseClickTile(board, mouse_x, mouse_y);
   for (size_t i = 0; i < 5; i++)
   {
     for (size_t j = 0; j < 5; j++)
     {
-      if (board[i][j].id == mouseClickTile(board, mouse_x, mouse_y))
+      if (board[i][j].id == clickedTileId)
       {
         if (board[i][j].id != 12 && board[i][j].piece == 0 && *turn < 12)
         {
@@ -353,21 +448,19 @@ bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mo
         }
         else if (board[i][j].piece == 1 && *turn >= 12 && *turn % 2 == 0)
         {
-          checkPossibilities(board, i, j);
+          setTilePossibility(board, i, j, hasPossibilities);
           *selectedTile = board[i][j];
         }
         else if (board[i][j].piece == 2 && *turn >= 12 && *turn % 2 != 0)
         {
-          checkPossibilities(board, i, j);
+          setTilePossibility(board, i, j, hasPossibilities);
           *selectedTile = board[i][j];
         }
         else if (board[i][j].positionable && selectedTile->id != -1)
         {
-          printf("%d : %d\n", selectedTile->id, board[i][j].positionable);
           movePiece(board, i, j, selectedTile);
           return true;
         }
-        printf("%d : %d\n", board[i][j].id, board[i][j].piece);
       }
     }
   }
@@ -427,7 +520,7 @@ void onMouseClickText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct tex
   }
 }
 
-int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, struct tile board[5][5], ALLEGRO_FONT **font, int *round, struct tile *selectedTile)
+int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, struct tile board[5][5], ALLEGRO_FONT **font, int *round, struct tile *selectedTile, bool hasPossibilities)
 {
   bool hoveringTile = false;
   ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
@@ -445,7 +538,7 @@ int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
     isHoveringTile(board, mouse_x, mouse_y, &hoveringTile);
     if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringTile)
     {
-      if (onMouseClickTile(display, board, mouse_x, mouse_y, running, round, selectedTile))
+      if (onMouseClickTile(display, board, mouse_x, mouse_y, running, round, selectedTile, hasPossibilities))
       {
         return 1;
       }
@@ -461,6 +554,7 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
   struct tile selectedTile = {0};
   int turn = 0;
   int pieces = 0;
+  bool hasPossibilities = false;
   struct tile board[5][5] = {0};
   initializeTiles(board);
   while (running)
@@ -474,13 +568,17 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
 
     al_flip_display();
 
-    if (handleGameEvents(texts, &running, display, board, font, &turn, &selectedTile) == 1)
+    hasPossibilities = checkPossibilities(board, turn);
+
+    if (handleGameEvents(texts, &running, display, board, font, &turn, &selectedTile, hasPossibilities) == 1)
     {
       pieces++;
       if (pieces % 2 == 0 && pieces != 0 && pieces < 24)
       {
         turn++;
-      } else if (pieces >= 24) {
+      }
+      else if (pieces >= 24)
+      {
         turn++;
       }
     }
@@ -505,7 +603,6 @@ int handleMenuEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
     isHoveringText(texts, mouse_x, mouse_y, &hoveringText);
     if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
     {
-      printf("Mouse click on text\n");
       onMouseClickText(display, font, texts, mouse_x, mouse_y, running);
       return 0;
     }
