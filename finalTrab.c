@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#define SCREEN_WIDTH 800
-#define SCREEN_HEIGHT 600
+#define SCREEN_WIDTH 1200
+#define SCREEN_HEIGHT 800
 #define TILE_SIZE 50
 #define CENTER_BOARD_X (SCREEN_WIDTH / 2) - (TILE_SIZE * 5 / 2)
 #define CENTER_BOARD_Y (SCREEN_HEIGHT / 2) - (TILE_SIZE * 5 / 2)
@@ -147,11 +147,11 @@ int getCenter(ALLEGRO_FONT *font, const char *text)
   return text_x;
 }
 
-struct text createText(int id, int y, const char *text, ALLEGRO_COLOR color, ALLEGRO_COLOR colorHover, ALLEGRO_FONT *font)
+struct text createText(int id, int x, int y, const char *text, ALLEGRO_COLOR color, ALLEGRO_COLOR colorHover, ALLEGRO_FONT *font)
 {
   struct text t;
   t.id = id;
-  t.x = getCenter(font, text);
+  t.x = x;
   t.y = y;
   t.width = al_get_text_width(font, text);
   t.height = al_get_font_line_height(font);
@@ -167,17 +167,17 @@ struct text createText(int id, int y, const char *text, ALLEGRO_COLOR color, ALL
 
 void initializeMenuTexts(struct text texts[6], ALLEGRO_FONT *font)
 {
-  texts[0] = createText(0, 100, "Player V.S Player", al_map_rgb(0, 0, 0), HOVER, font);
-  texts[1] = createText(1, 150, "Player V.S Computer", al_map_rgb(0, 0, 0), HOVER, font);
-  texts[2] = createText(2, 200, "Continue Last Game", al_map_rgb(0, 0, 0), HOVER, font);
-  texts[3] = createText(3, 250, "History", al_map_rgb(0, 0, 0), HOVER, font);
-  texts[4] = createText(4, 300, "Help", al_map_rgb(0, 0, 0), HOVER, font);
-  texts[5] = createText(5, 350, "Quit", al_map_rgb(0, 0, 0), HOVER, font);
+  texts[0] = createText(0, getCenter(font, "Player V.S Player"), 100, "Player V.S Player", al_map_rgb(0, 0, 0), HOVER, font);
+  texts[1] = createText(1, getCenter(font, "Player V.S Computer"), 150, "Player V.S Computer", al_map_rgb(0, 0, 0), HOVER, font);
+  texts[2] = createText(2, getCenter(font, "Continue Last Game"), 200, "Continue Last Game", al_map_rgb(0, 0, 0), HOVER, font);
+  texts[3] = createText(3, getCenter(font, "History"), 250, "History", al_map_rgb(0, 0, 0), HOVER, font);
+  texts[4] = createText(4, getCenter(font, "Help"), 300, "Help", al_map_rgb(0, 0, 0), HOVER, font);
+  texts[5] = createText(5, getCenter(font, "Quit"), 350, "Quit", al_map_rgb(0, 0, 0), HOVER, font);
 }
 
-void drawText(struct text texts[])
+void drawText(struct text texts[], int length)
 {
-  for (size_t i = 0; i < 6; i++)
+  for (size_t i = 0; i < length; i++)
   {
     if (texts[i].hover)
     {
@@ -240,8 +240,6 @@ bool initializeAllegro(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
   return true;
 }
 
-int handleMenuEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font);
-int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, struct tile board[5][5], ALLEGRO_FONT **font, int *round, struct tile *selectedTile, bool hasPossibilities);
 void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font);
 
 void isHoveringTile(struct tile board[5][5], int mouse_x, int mouse_y, bool *hoveringTile)
@@ -623,7 +621,79 @@ int mouseClickText(struct text texts[], int mouse_x, int mouse_y)
   return -1;
 }
 
-void onMouseClickText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], int mouse_x, int mouse_y, bool *running)
+void onMouseClickHelpText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], int mouse_x, int mouse_y, bool *running)
+{
+  switch (mouseClickText(texts, mouse_x, mouse_y))
+  {
+  case 0:
+    *running = false;
+    break;
+  case 1:
+    // nextTip
+    break;
+  case 2:
+    // previousTip or exit
+    break;
+  default:
+    break;
+  }
+}
+
+int handleHelpEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
+{
+  bool hoveringText = false;
+  ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
+  ALLEGRO_EVENT ev;
+  al_wait_for_event(event_queue, &ev);
+
+  if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
+  {
+    al_destroy_display(*display);
+  }
+  else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
+  {
+    int mouse_x = ev.mouse.x;
+    int mouse_y = ev.mouse.y;
+    isHoveringText(texts, mouse_x, mouse_y, &hoveringText);
+    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
+    {
+      onMouseClickHelpText(display, font, texts, mouse_x, mouse_y, running);
+      return 0;
+    }
+    al_destroy_event_queue(event_queue);
+  }
+  return -1;
+}
+
+void helpView(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
+{
+  bool running = true;
+  struct text texts[3] = {0};
+  struct tile board[5][5] = {0};
+  int cont = 0;
+  texts[0] = createText(0, 20, 20, "Back to Menu", al_map_rgb(0, 0, 0), HOVER, *font);
+  texts[1] = createText(1, 20, SCREEN_HEIGHT - al_get_font_line_height(*font), "Previous Tip", al_map_rgb(0, 0, 0), HOVER, *font);
+  texts[2] = createText(2, SCREEN_WIDTH - al_get_text_width(*font, "Next Tip "), SCREEN_HEIGHT - al_get_font_line_height(*font), "Next Tip", al_map_rgb(0, 0, 0), HOVER, *font);
+
+  initializeTiles(board);
+
+  while (running)
+  {
+    al_clear_to_color(al_map_rgb(200, 255, 255));
+
+    drawText(texts, sizeof(texts) / sizeof(texts[0]));
+
+    drawBoard(board);
+
+    al_flip_display();
+
+    handleHelpEvents(texts, &running, display, font);
+
+    cont++;
+  }
+}
+
+void onMouseClickMenuText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], int mouse_x, int mouse_y, bool *running)
 {
   switch (mouseClickText(texts, mouse_x, mouse_y))
   {
@@ -640,7 +710,7 @@ void onMouseClickText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct tex
     printf("History\n");
     break;
   case 4:
-    printf("Help\n");
+    helpView(display, font);
     break;
   case 5:
     *running = false;
@@ -733,7 +803,7 @@ int handleMenuEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
     isHoveringText(texts, mouse_x, mouse_y, &hoveringText);
     if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
     {
-      onMouseClickText(display, font, texts, mouse_x, mouse_y, running);
+      onMouseClickMenuText(display, font, texts, mouse_x, mouse_y, running);
       return 0;
     }
     al_destroy_event_queue(event_queue);
@@ -752,7 +822,7 @@ void menu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
   {
     al_clear_to_color(al_map_rgb(255, 255, 255));
 
-    drawText(texts);
+    drawText(texts, sizeof(texts) / sizeof(texts[0]));
 
     al_flip_display();
 
@@ -767,7 +837,6 @@ int main()
 {
   ALLEGRO_DISPLAY *display = NULL;
   ALLEGRO_FONT *font = NULL;
-  printf("%d %d %d %d", CENTER_BOARD_X, CENTER_BOARD_Y, TILE_END_X, TILE_END_Y);
   initializeAllegro(&display, &font);
   menu(&display, &font);
   return 0;
