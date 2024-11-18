@@ -424,6 +424,48 @@ bool checkPossibilities(struct tile board[5][5], int turn)
   return possibilities > 0;
 }
 
+void checkEat(struct tile board[5][5], int x, int y, int turn)
+{
+  if (turn % 2 != 0)
+  {
+    if (board[x + 1][y].piece == 1 && board[x + 2][y].piece == 2)
+    {
+      board[x + 1][y].piece = 0;
+    }
+    if (board[x - 1][y].piece == 1 && board[x - 2][y].piece == 2)
+    {
+      board[x - 1][y].piece = 0;
+    }
+    if (board[x][y + 1].piece == 1 && board[x][y + 2].piece == 2)
+    {
+      board[x][y + 1].piece = 0;
+    }
+    if (board[x][y - 1].piece == 1 && board[x][y - 2].piece == 2)
+    {
+      board[x][y - 1].piece = 0;
+    }
+  }
+  else
+  {
+    if (turn % 2 == 0 && board[x + 1][y].piece == 2 && board[x + 2][y].piece == 1)
+    {
+      board[x + 1][y].piece = 0;
+    }
+    if (turn % 2 == 0 && board[x - 1][y].piece == 2 && board[x - 2][y].piece == 1)
+    {
+      board[x - 1][y].piece = 0;
+    }
+    if (turn % 2 == 0 && board[x][y + 1].piece == 2 && board[x][y + 2].piece == 1)
+    {
+      board[x][y + 1].piece = 0;
+    }
+    if (turn % 2 == 0 && board[x][y - 1].piece == 2 && board[x][y - 2].piece == 1)
+    {
+      board[x][y - 1].piece = 0;
+    }
+  }
+}
+
 void movePiece(struct tile board[5][5], int x, int y, struct tile *selectedTile)
 {
   board[x][y].piece = selectedTile->piece;
@@ -459,6 +501,7 @@ bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mo
         else if (board[i][j].positionable && selectedTile->id != -1)
         {
           movePiece(board, i, j, selectedTile);
+          checkEat(board, i, j, *turn);
           return true;
         }
       }
