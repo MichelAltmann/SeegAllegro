@@ -428,41 +428,126 @@ void checkEat(struct tile board[5][5], int x, int y, int turn)
 {
   if (turn % 2 != 0)
   {
-    if (board[x + 1][y].piece == 1 && board[x + 2][y].piece == 2)
+    if (x + 2 < 5)
     {
-      board[x + 1][y].piece = 0;
+      if (board[x + 1][y].piece == 1 && board[x + 1][y].id != 12 && board[x + 2][y].piece == 2)
+      {
+        board[x + 1][y].piece = 0;
+      }
     }
-    if (board[x - 1][y].piece == 1 && board[x - 2][y].piece == 2)
+    if (x - 2 >= 0)
     {
-      board[x - 1][y].piece = 0;
+      if (board[x - 1][y].piece == 1 && board[x - 1][y].id != 12 && board[x - 2][y].piece == 2)
+      {
+        board[x - 1][y].piece = 0;
+      }
     }
-    if (board[x][y + 1].piece == 1 && board[x][y + 2].piece == 2)
+    if (y + 2 < 5)
     {
-      board[x][y + 1].piece = 0;
+      if (board[x][y + 1].piece == 1 && board[x][y + 1].id != 12 && board[x][y + 2].piece == 2)
+      {
+        board[x][y + 1].piece = 0;
+      }
     }
-    if (board[x][y - 1].piece == 1 && board[x][y - 2].piece == 2)
+    if (y - 2 >= 0)
     {
-      board[x][y - 1].piece = 0;
+      if (board[x][y - 1].piece == 1 && board[x][y - 1].id != 12 && board[x][y - 2].piece == 2)
+      {
+        board[x][y - 1].piece = 0;
+      }
     }
   }
   else
   {
-    if (turn % 2 == 0 && board[x + 1][y].piece == 2 && board[x + 2][y].piece == 1)
+    if (x + 2 < 5)
     {
-      board[x + 1][y].piece = 0;
+      if (board[x + 1][y].piece == 2 && board[x + 1][y].id != 12 && board[x + 2][y].piece == 1)
+      {
+        board[x + 1][y].piece = 0;
+      }
     }
-    if (turn % 2 == 0 && board[x - 1][y].piece == 2 && board[x - 2][y].piece == 1)
+    if (x - 2 >= 0)
     {
-      board[x - 1][y].piece = 0;
+      if (board[x - 1][y].piece == 2 && board[x - 1][y].id != 12 && board[x - 2][y].piece == 1)
+      {
+        board[x - 1][y].piece = 0;
+      }
     }
-    if (turn % 2 == 0 && board[x][y + 1].piece == 2 && board[x][y + 2].piece == 1)
+    if (y + 2 < 5)
     {
-      board[x][y + 1].piece = 0;
+      if (board[x][y + 1].piece == 2 && board[x][y + 1].id != 12 && board[x][y + 2].piece == 1)
+      {
+        board[x][y + 1].piece = 0;
+      }
     }
-    if (turn % 2 == 0 && board[x][y - 1].piece == 2 && board[x][y - 2].piece == 1)
+    if (y - 2 >= 0)
     {
-      board[x][y - 1].piece = 0;
+      if (board[x][y - 1].piece == 2 && board[x][y - 1].id != 12 && board[x][y - 2].piece == 1)
+      {
+        board[x][y - 1].piece = 0;
+      }
     }
+  }
+}
+
+void checkSmallWin(struct tile board[5][5], int x, int y, bool *running)
+{
+  int winX = 0;
+  int winY = 0;
+  int piece = board[x][y].piece;
+  for (size_t i = 0; i < 5; i++)
+  {
+    if (board[x][i].piece == piece)
+    {
+      winY++;
+    }
+    if (winY == 5)
+    {
+      *running = false;
+      printf("SmallWinX");
+    }
+  }
+  for (size_t i = 0; i < 5; i++)
+  {
+    if (board[i][y].piece == piece)
+    {
+      winX++;
+    }
+    if (winX == 5)
+    {
+      *running = false;
+      printf("SmallWinY");
+    }
+  }
+}
+
+void checkWin(struct tile board[5][5], int turn, bool *running)
+{
+  int player1 = 0;
+  int player2 = 0;
+  for (size_t i = 0; i < 5; i++)
+  {
+    for (size_t j = 0; j < 5; j++)
+    {
+      if (board[i][j].piece == 1)
+      {
+        player1++;
+      }
+      else if (board[i][j].piece == 2)
+      {
+        player2++;
+      }
+    }
+  }
+  if (player1 <= 3)
+  {
+    printf("Player 2 wins\n");
+    *running = false;
+  }
+  else if (player2 <= 3)
+  {
+    printf("Player 1 wins\n");
+    *running = false;
   }
 }
 
@@ -502,6 +587,8 @@ bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mo
         {
           movePiece(board, i, j, selectedTile);
           checkEat(board, i, j, *turn);
+          checkWin(board, *turn, running);
+          checkSmallWin(board, i, j, running);
           return true;
         }
       }
