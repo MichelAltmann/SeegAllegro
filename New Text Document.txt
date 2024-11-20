@@ -1,3 +1,14 @@
+
+windows
+
 g++ -I C:\allegro\include -c finalTrab.c
 g++.exe -I C:\allegro\include finalTrab.o -o finalTrab.exe liballegro_monolith.dll.a
 finalTrab.exe
+
+macOS
+
+gcc -o finalTrab finalTrab.c \
+    -I/opt/homebrew/include/allegro5 \
+    -L/opt/homebrew/lib \
+    -lallegro -lallegro_image -lallegro_font -lallegro_ttf -lallegro_primitives -lallegro_main
+  

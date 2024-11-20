@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#define SCREEN_WIDTH 1200
-#define SCREEN_HEIGHT 800
-#define TILE_SIZE 50
+#define SCREEN_WIDTH 1600
+#define SCREEN_HEIGHT 1200
+#define TILE_SIZE 100
 #define CENTER_BOARD_X (SCREEN_WIDTH / 2) - (TILE_SIZE * 5 / 2)
 #define CENTER_BOARD_Y (SCREEN_HEIGHT / 2) - (TILE_SIZE * 5 / 2)
 #define TILE_END_X CENTER_BOARD_X + TILE_SIZE
@@ -621,7 +621,7 @@ int mouseClickText(struct text texts[], int mouse_x, int mouse_y)
   return -1;
 }
 
-void onMouseClickHelpText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], int mouse_x, int mouse_y, bool *running)
+void onMouseClickHelpText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], int mouse_x, int mouse_y, bool *running, int *page)
 {
   switch (mouseClickText(texts, mouse_x, mouse_y))
   {
@@ -629,17 +629,20 @@ void onMouseClickHelpText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct
     *running = false;
     break;
   case 1:
-    // nextTip
+    *page++;
     break;
   case 2:
-    // previousTip or exit
+    if (*page > 0)
+    {
+      *page--;
+    }
     break;
   default:
     break;
   }
 }
 
-int handleHelpEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
+int handleHelpEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, int *page)
 {
   bool hoveringText = false;
   ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
@@ -657,7 +660,7 @@ int handleHelpEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
     isHoveringText(texts, mouse_x, mouse_y, &hoveringText);
     if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
     {
-      onMouseClickHelpText(display, font, texts, mouse_x, mouse_y, running);
+      onMouseClickHelpText(display, font, texts, mouse_x, mouse_y, running, page);
       return 0;
     }
     al_destroy_event_queue(event_queue);
@@ -665,12 +668,32 @@ int handleHelpEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
   return -1;
 }
 
+void page0(struct tile board[5][5], ALLEGRO_FONT **font)
+{
+  /*
+  1. The game is played on a 5x5 board.
+  2. Each player has 12 pieces, player 1 is red, and player 2 is blue.
+  3. The objective is to eat all the opponent's pieces.
+  4. The game has two phases: placement and movement.
+  5. In the placement phase, players take turns placing 2 of their pieces on the board each turn, players CANNOT place their pieces in the middle during this phase.
+  6. In the movement phase, players take turns moving their pieces to adjacent empty spaces.
+  7. You can eat an opponent's piece by surrounding it with your pieces in your turn.
+  8. You can only eat a piece when its your turn.
+  9. A piece can only move to an adjacent empty space.
+  10. You can eat an opponent's piece if stuck with no empty spaces to move.
+  11. You can't eat the opponent's piece if it's in the center of the board.
+  12. You win by eating all the opponent's pieces.
+  13. You can have a small win by aligning all your pieces in a row or column, separating the board in two, with all the opponents pieces on one side.
+  14. The game draws if both players have 3 or less pieces.
+  */
+}
+
 void helpView(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
 {
   bool running = true;
   struct text texts[3] = {0};
   struct tile board[5][5] = {0};
-  int cont = 0;
+  int page = 0;
   texts[0] = createText(0, 20, 20, "Back to Menu", al_map_rgb(0, 0, 0), HOVER, *font);
   texts[1] = createText(1, 20, SCREEN_HEIGHT - al_get_font_line_height(*font), "Previous Tip", al_map_rgb(0, 0, 0), HOVER, *font);
   texts[2] = createText(2, SCREEN_WIDTH - al_get_text_width(*font, "Next Tip "), SCREEN_HEIGHT - al_get_font_line_height(*font), "Next Tip", al_map_rgb(0, 0, 0), HOVER, *font);
@@ -681,15 +704,49 @@ void helpView(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
   {
     al_clear_to_color(al_map_rgb(200, 255, 255));
 
+    switch (page)
+    {
+    case 0:
+      page0(board, font);
+      break;
+    // case 1:
+    //   page1(board, font);
+    //   break;
+    // case 2:
+    //   page2(board, font);
+    //   break;
+    // case 3:
+    //   page3(board, font);
+    //   break;
+    // case 4:
+    //   page4(board, font);
+    //   break;
+    // case 5:
+    //   page5(board, font);
+    //   break;
+    // case 6:
+    //   page6(board, font);
+    //   break;
+    // case 7:
+    //   page7(board, font);
+    //   break;
+    // case 8:
+    //   page8(board, font);
+    //   break;
+    // case 9:
+    //   page9(board, font);
+    //   break;
+    default:
+      break;
+    }
+
     drawText(texts, sizeof(texts) / sizeof(texts[0]));
 
     drawBoard(board);
 
     al_flip_display();
 
-    handleHelpEvents(texts, &running, display, font);
-
-    cont++;
+    handleHelpEvents(texts, &running, display, font, &page);
   }
 }
 
