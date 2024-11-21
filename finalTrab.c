@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#define SCREEN_WIDTH 1600
-#define SCREEN_HEIGHT 1200
-#define TILE_SIZE 100
+#define SCREEN_WIDTH 1200
+#define SCREEN_HEIGHT 800
+#define TILE_SIZE 50
 #define CENTER_BOARD_X (SCREEN_WIDTH / 2) - (TILE_SIZE * 5 / 2)
 #define CENTER_BOARD_Y (SCREEN_HEIGHT / 2) - (TILE_SIZE * 5 / 2)
 #define TILE_END_X CENTER_BOARD_X + TILE_SIZE
@@ -190,7 +190,7 @@ void drawText(struct text texts[], int length)
   }
 }
 
-bool initializeAllegro(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
+bool initializeAllegro(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont)
 {
   if (!al_init())
   {
@@ -231,6 +231,14 @@ bool initializeAllegro(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
 
   *font = al_load_ttf_font("MinecraftRegular-Bmg3.otf", 32, 0);
   if (!*font)
+  {
+    fprintf(stderr, "Failed to load font. Make sure 'MinecraftRegular-Bmg3.otf' is in the correct directory.\n");
+    al_destroy_display(*display);
+    return false;
+  }
+
+  *smallFont = al_load_ttf_font("MinecraftRegular-Bmg3.otf", 24, 0);
+  if (!*smallFont)
   {
     fprintf(stderr, "Failed to load font. Make sure 'MinecraftRegular-Bmg3.otf' is in the correct directory.\n");
     al_destroy_display(*display);
@@ -629,13 +637,10 @@ void onMouseClickHelpText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct
     *running = false;
     break;
   case 1:
-    *page++;
+    *page = *page - 1;
     break;
   case 2:
-    if (*page > 0)
-    {
-      *page--;
-    }
+    *page = *page + 1;
     break;
   default:
     break;
@@ -673,10 +678,10 @@ void page0(struct tile board[5][5], ALLEGRO_FONT **font)
   /*
   1. The game is played on a 5x5 board.
   2. Each player has 12 pieces, player 1 is red, and player 2 is blue.
-  3. The objective is to eat all the opponent's pieces.
-  4. The game has two phases: placement and movement.
-  5. In the placement phase, players take turns placing 2 of their pieces on the board each turn, players CANNOT place their pieces in the middle during this phase.
-  6. In the movement phase, players take turns moving their pieces to adjacent empty spaces.
+  3. The game has two phases: placement and movement.
+  4. In the placement phase, players take turns placing 2 of their pieces on the board each turn, players CANNOT place their pieces in the middle during this phase.
+  5. In the movement phase, players take turns moving their pieces to adjacent empty spaces.
+  6. The objective is to eat all the opponent's pieces.
   7. You can eat an opponent's piece by surrounding it with your pieces in your turn.
   8. You can only eat a piece when its your turn.
   9. A piece can only move to an adjacent empty space.
@@ -686,15 +691,196 @@ void page0(struct tile board[5][5], ALLEGRO_FONT **font)
   13. You can have a small win by aligning all your pieces in a row or column, separating the board in two, with all the opponents pieces on one side.
   14. The game draws if both players have 3 or less pieces.
   */
+  initializeTiles(board);
+  char text[100] = "1. The game is played on a 5x5 board.";
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
 }
 
-void helpView(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
+void page1(struct tile board[5][5], ALLEGRO_FONT **font)
+{
+  initializeTiles(board);
+  char text[100] = "2. Each player has 12 pieces,";
+  char text1[100] = "player 1 is red, and player 2 is blue.";
+  board[1][2].piece = 1;
+  board[3][2].piece = 2;
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 70, 0, text1);
+}
+
+void page2(struct tile board[5][5], ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont)
+{
+  initializeTiles(board);
+  char text[100] = "3. Placement phase:";
+  char text1[100] = "Players take turns placing 2 of their pieces on the board each turn.";
+  char text2[100] = "players CANNOT place their pieces in the middle during this phase.";
+  board[2][2].color = al_map_rgb(255, 0, 0);
+  board[4][2].piece = 1;
+  board[3][1].piece = 2;
+  board[1][2].piece = 1;
+  board[3][2].piece = 2;
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
+  al_draw_text(*smallFont, al_map_rgb(0, 0, 0), getCenter(*smallFont, text1), 65, 0, text1);
+  al_draw_text(*smallFont, al_map_rgb(0, 0, 0), getCenter(*smallFont, text2), 88, 0, text2);
+}
+
+void adjacentSpaces(struct tile board[5][5])
+{
+  board[4][2].piece = 1;
+  board[3][1].piece = 2;
+  board[1][2].piece = 1;
+  board[3][2].piece = 2;
+  board[0][2].positionable = true;
+  board[1][1].positionable = true;
+  board[1][3].positionable = true;
+  board[2][2].positionable = true;
+}
+
+void page3(struct tile board[5][5], ALLEGRO_FONT **font)
+{
+  initializeTiles(board);
+  char text[100] = "4. Movement phase:";
+  char text1[100] = "Players take turns moving their pieces to adjacent empty spaces.";
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 70, 0, text1);
+  adjacentSpaces(board);
+}
+
+void page4(struct tile board[5][5], ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont)
+{
+  initializeTiles(board);
+  char text[100] = "5. Objective:";
+  char text1[100] = "The objective is to eat all the opponent's pieces.";
+  char text2[100] = "You can eat an opponent's piece by surrounding it with your pieces in your turn.";
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 60, 0, text1);
+  al_draw_text(*smallFont, al_map_rgb(0, 0, 0), getCenter(*smallFont, text2), 90, 0, text2);
+  adjacentSpaces(board);
+}
+
+void page5(struct tile board[5][5], ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont)
+{
+  initializeTiles(board);
+  char text[100] = "5. Objective:";
+  char text1[100] = "The objective is to eat all the opponent's pieces.";
+  char text2[100] = "You can eat an opponent's piece by surrounding it with your pieces in your turn.";
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 60, 0, text1);
+  al_draw_text(*smallFont, al_map_rgb(0, 0, 0), getCenter(*smallFont, text2), 90, 0, text2);
+  board[4][2].piece = 1;
+  board[3][1].piece = 2;
+  board[2][2].piece = 1;
+}
+
+void page6(struct tile board[5][5], ALLEGRO_FONT **font)
+{
+  initializeTiles(board);
+  char text[100] = "You CANNOT eat an opponents piece";
+  char text1[100] = "if it's in the center of the board.";
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 60, 0, text1);
+  board[2][2].piece = 2;
+  board[2][2].color = al_map_rgb(255, 0, 0);
+  board[3][2].piece = 1;
+  board[1][2].piece = 1;
+}
+
+void stuckPieces(struct tile board[5][5])
+{
+  board[0][0].piece = 1;
+  board[0][1].piece = 2;
+  board[1][0].piece = 2;
+  board[4][4].piece = 1;
+  board[4][3].piece = 2;
+  board[3][4].piece = 2;
+  board[4][0].piece = 1;
+  board[3][0].piece = 2;
+  board[4][1].piece = 2;
+  board[0][4].piece = 1;
+  board[0][3].piece = 2;
+  board[1][4].piece = 2;
+
+  board[0][3].positionable = true;
+  board[1][4].positionable = true;
+}
+
+void page7(struct tile board[5][5], ALLEGRO_FONT **font)
+{
+  initializeTiles(board);
+  char text[100] = "If stuck with no empty spaces to move.";
+  char text1[100] = "You can eat an opponent's piece.";
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 60, 0, text1);
+  stuckPieces(board);
+}
+
+void page8(struct tile board[5][5], ALLEGRO_FONT **font)
+{
+  initializeTiles(board);
+  char text[100] = "If stuck with no empty spaces to move.";
+  char text1[100] = "You can eat an opponent's piece.";
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 60, 0, text1);
+  stuckPieces(board);
+  board[0][4].piece = 0;
+  board[1][4].piece = 1;
+  board[0][3].positionable = false;
+  board[1][4].positionable = false;
+}
+
+void page9(struct tile board[5][5], ALLEGRO_FONT **font)
+{
+  initializeTiles(board);
+  char text[100] = "You win by eating all the opponent's pieces.";
+  char text1[100] = "Player 2 Wins!";
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
+  al_draw_text(*font, al_map_rgb(0, 0, 200), getCenter(*font, text1), SCREEN_HEIGHT - al_get_font_line_height(*font), 0, text1);
+  board[3][2].piece = 2;
+  board[1][4].piece = 2;
+  board[1][3].piece = 2;
+  board[4][3].piece = 2;
+}
+
+void page10(struct tile board[5][5], ALLEGRO_FONT **font)
+{
+  initializeTiles(board);
+  char text[100] = "If each player has 3 or less pieces.";
+  char text1[100] = "The game draws!";
+  char text2[100] = "Draw!";
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 60, 0, text1);
+  al_draw_text(*font, al_map_rgb(200, 0, 200), getCenter(*font, text2), SCREEN_HEIGHT - al_get_font_line_height(*font), 0, text2);
+  board[3][2].piece = 2;
+  board[1][4].piece = 2;
+  board[1][3].piece = 2;
+  board[2][0].piece = 1;
+  board[0][4].piece = 1;
+  board[4][3].piece = 1;
+}
+
+void page11(struct tile board[5][5], ALLEGRO_FONT **font)
+{
+  initializeTiles(board);
+  char text[100] = "You can have a small win by aligning all your pieces in a row or column";
+  char text1[100] = "separating the board in two, with all the opponents pieces on one side.";
+  char text2[100] = "Player 1 Small win!";
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 55, 0, text);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 85, 0, text1);
+  al_draw_text(*font, al_map_rgb(200, 0, 0), getCenter(*font, text2), SCREEN_HEIGHT - al_get_font_line_height(*font), 0, text2);
+  board[3][2].piece = 2;
+  board[1][4].piece = 2;
+  board[1][3].piece = 2;
+  board[2][0].piece = 1;
+  board[0][4].piece = 1;
+  board[4][3].piece = 1;
+}
+
+void helpView(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont)
 {
   bool running = true;
   struct text texts[3] = {0};
   struct tile board[5][5] = {0};
   int page = 0;
-  texts[0] = createText(0, 20, 20, "Back to Menu", al_map_rgb(0, 0, 0), HOVER, *font);
+  texts[0] = createText(0, 20, 20, "Back", al_map_rgb(0, 0, 0), HOVER, *font);
   texts[1] = createText(1, 20, SCREEN_HEIGHT - al_get_font_line_height(*font), "Previous Tip", al_map_rgb(0, 0, 0), HOVER, *font);
   texts[2] = createText(2, SCREEN_WIDTH - al_get_text_width(*font, "Next Tip "), SCREEN_HEIGHT - al_get_font_line_height(*font), "Next Tip", al_map_rgb(0, 0, 0), HOVER, *font);
 
@@ -703,54 +889,56 @@ void helpView(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
   while (running)
   {
     al_clear_to_color(al_map_rgb(200, 255, 255));
+    handleHelpEvents(texts, &running, display, font, &page);
+    drawBoard(board);
+    drawText(texts, sizeof(texts) / sizeof(texts[0]));
 
     switch (page)
     {
     case 0:
       page0(board, font);
       break;
-    // case 1:
-    //   page1(board, font);
-    //   break;
-    // case 2:
-    //   page2(board, font);
-    //   break;
-    // case 3:
-    //   page3(board, font);
-    //   break;
-    // case 4:
-    //   page4(board, font);
-    //   break;
-    // case 5:
-    //   page5(board, font);
-    //   break;
-    // case 6:
-    //   page6(board, font);
-    //   break;
-    // case 7:
-    //   page7(board, font);
-    //   break;
-    // case 8:
-    //   page8(board, font);
-    //   break;
-    // case 9:
-    //   page9(board, font);
-    //   break;
+    case 1:
+      page1(board, font);
+      break;
+    case 2:
+      page2(board, font, smallFont);
+      break;
+    case 3:
+      page3(board, font);
+      break;
+    case 4:
+      page4(board, font, smallFont);
+      break;
+    case 5:
+      page5(board, font, smallFont);
+      break;
+    case 6:
+      page6(board, font);
+      break;
+    case 7:
+      page7(board, font);
+      break;
+    case 8:
+      page8(board, font);
+      break;
+    case 9:
+      page9(board, font);
+      break;
+    case 10:
+      page10(board, font);
+      break;
+    case 11:
+      page11(board, font);
+      break;
     default:
       break;
     }
-
-    drawText(texts, sizeof(texts) / sizeof(texts[0]));
-
-    drawBoard(board);
-
     al_flip_display();
-
-    handleHelpEvents(texts, &running, display, font, &page);
   }
 }
 
-void onMouseClickMenuText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], int mouse_x, int mouse_y, bool *running)
+void onMouseClickMenuText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont, struct text texts[], int mouse_x, int mouse_y, bool *running)
 {
   switch (mouseClickText(texts, mouse_x, mouse_y))
   {
@@ -767,7 +955,7 @@ void onMouseClickMenuText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct
     printf("History\n");
     break;
   case 4:
-    helpView(display, font);
+    helpView(display, font, smallFont);
     break;
   case 5:
     *running = false;
@@ -842,7 +1030,7 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
   }
 }
 
-int handleMenuEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
+int handleMenuEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont)
 {
   bool hoveringText = false;
   ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
@@ -860,7 +1048,7 @@ int handleMenuEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
     isHoveringText(texts, mouse_x, mouse_y, &hoveringText);
     if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
     {
-      onMouseClickMenuText(display, font, texts, mouse_x, mouse_y, running);
+      onMouseClickMenuText(display, font, smallFont, texts, mouse_x, mouse_y, running);
       return 0;
     }
     al_destroy_event_queue(event_queue);
@@ -868,7 +1056,7 @@ int handleMenuEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
   return -1;
 }
 
-void menu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
+void menu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont)
 {
   bool running = true;
   struct text texts[6] = {0};
@@ -883,7 +1071,7 @@ void menu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font)
 
     al_flip_display();
 
-    handleMenuEvents(texts, &running, display, font);
+    handleMenuEvents(texts, &running, display, font, smallFont);
   }
 
   al_destroy_font(*font);
@@ -894,7 +1082,8 @@ int main()
 {
   ALLEGRO_DISPLAY *display = NULL;
   ALLEGRO_FONT *font = NULL;
-  initializeAllegro(&display, &font);
-  menu(&display, &font);
+  ALLEGRO_FONT *smallFont = NULL;
+  initializeAllegro(&display, &font, &smallFont);
+  menu(&display, &font, &smallFont);
   return 0;
 }
