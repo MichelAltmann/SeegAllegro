@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#define SCREEN_WIDTH 1200
-#define SCREEN_HEIGHT 800
-#define TILE_SIZE 50
+#define SCREEN_WIDTH 1600
+#define SCREEN_HEIGHT 1200
+#define TILE_SIZE 75
 #define CENTER_BOARD_X (SCREEN_WIDTH / 2) - (TILE_SIZE * 5 / 2)
 #define CENTER_BOARD_Y (SCREEN_HEIGHT / 2) - (TILE_SIZE * 5 / 2)
 #define TILE_END_X CENTER_BOARD_X + TILE_SIZE
@@ -496,6 +496,102 @@ void checkEat(struct tile board[5][5], int x, int y, int turn)
   }
 }
 
+bool checkWinSide(int *piece1, int *piece2)
+{
+  if (*piece1 == 0 && *piece2 > 0)
+  {
+    *piece1 = 0;
+    *piece2 = 0;
+    return true;
+  }
+  else if (*piece2 == 0 && *piece1 > 0)
+  {
+    *piece1 = 0;
+    *piece2 = 0;
+    return true;
+  }
+  return false;
+}
+
+bool checkSmallWinSide(struct tile board[5][5], int x, int y, bool xAxis)
+{
+  int piece1 = 0;
+  int piece2 = 0;
+  if (xAxis)
+  {
+    for (size_t i = 0; i < 5; i++)
+    {
+      for (size_t j = y; j < 5; j++)
+      {
+        if (board[i][j].piece == 1)
+        {
+          piece1++;
+        }
+        else if (board[i][j].piece == 2)
+        {
+          piece2++;
+        }
+      }
+    }
+    if (checkWinSide(&piece1, &piece2))
+    {
+      return true;
+    }
+    for (size_t i = 0; i < 5; i++)
+    {
+      for (size_t j = 0; j < y; j++)
+      {
+        if (board[i][j].piece == 1)
+        {
+          piece1++;
+        }
+        else if (board[i][j].piece == 2)
+        {
+          piece2++;
+        }
+      }
+    }
+    return checkWinSide(&piece1, &piece2);
+  }
+  else
+  {
+    for (size_t i = x; i < 5; i++)
+    {
+      for (size_t j = 0; j < 5; j++)
+      {
+        if (board[i][j].piece == 1)
+        {
+          piece1++;
+        }
+        else if (board[i][j].piece == 2)
+        {
+          piece2++;
+        }
+      }
+    }
+    if (checkWinSide(&piece1, &piece2))
+    {
+      return true;
+    }
+    for (size_t i = 0; i < x; i++)
+    {
+      for (size_t j = 0; j < 5; j++)
+      {
+        if (board[i][j].piece == 1)
+        {
+          piece1++;
+        }
+        else if (board[i][j].piece == 2)
+        {
+          piece2++;
+        }
+      }
+    }
+    return checkWinSide(&piece1, &piece2);
+  }
+  return false;
+}
+
 void checkSmallWin(struct tile board[5][5], int x, int y, bool *running)
 {
   int winX = 0;
@@ -507,10 +603,20 @@ void checkSmallWin(struct tile board[5][5], int x, int y, bool *running)
     {
       winY++;
     }
-    if (winY == 5)
+    if (winY == 5 && x != 0 && x != 4)
     {
-      *running = false;
-      printf("SmallWinX");
+      if (checkSmallWinSide(board, x, y, false))
+      {
+        *running = false;
+        if (board[x][y].piece == 1)
+        {
+          printf("Player 1 Small Win!");
+        }
+        else if (board[x][y].piece == 2)
+        {
+          printf("Player 2 Small Win!");
+        }
+      }
     }
   }
   for (size_t i = 0; i < 5; i++)
@@ -519,10 +625,20 @@ void checkSmallWin(struct tile board[5][5], int x, int y, bool *running)
     {
       winX++;
     }
-    if (winX == 5)
+    if (winX == 5 && x != 0 && x != 4)
     {
-      *running = false;
-      printf("SmallWinY");
+      if (checkSmallWinSide(board, x, y, false))
+      {
+        *running = false;
+        if (board[x][y].piece == 1)
+        {
+          printf("Player 1 Small Win!");
+        }
+        else if (board[x][y].piece == 2)
+        {
+          printf("Player 2 Small Win!");
+        }
+      }
     }
   }
 }
@@ -545,14 +661,39 @@ void checkWin(struct tile board[5][5], int turn, bool *running)
       }
     }
   }
-  if (player1 <= 3)
+  if (player1 == 0)
   {
     printf("Player 2 wins\n");
     *running = false;
   }
-  else if (player2 <= 3)
+  else if (player2 == 0)
   {
     printf("Player 1 wins\n");
+    *running = false;
+  }
+}
+
+void checkDraw(struct tile board[5][5], int turn, bool *running)
+{
+  int player1 = 0;
+  int player2 = 0;
+  for (size_t i = 0; i < 5; i++)
+  {
+    for (size_t j = 0; j < 5; j++)
+    {
+      if (board[i][j].piece == 1)
+      {
+        player1++;
+      }
+      else if (board[i][j].piece == 2)
+      {
+        player2++;
+      }
+    }
+  }
+  if (player1 <= 3 && player2 <= 3)
+  {
+    printf("Draw\n");
     *running = false;
   }
 }
@@ -593,6 +734,7 @@ bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mo
         {
           movePiece(board, i, j, selectedTile);
           checkEat(board, i, j, *turn);
+          checkDraw(board, *turn, running);
           checkWin(board, *turn, running);
           checkSmallWin(board, i, j, running);
           return true;
@@ -675,24 +817,8 @@ int handleHelpEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
 
 void page0(struct tile board[5][5], ALLEGRO_FONT **font)
 {
-  /*
-  1. The game is played on a 5x5 board.
-  2. Each player has 12 pieces, player 1 is red, and player 2 is blue.
-  3. The game has two phases: placement and movement.
-  4. In the placement phase, players take turns placing 2 of their pieces on the board each turn, players CANNOT place their pieces in the middle during this phase.
-  5. In the movement phase, players take turns moving their pieces to adjacent empty spaces.
-  6. The objective is to eat all the opponent's pieces.
-  7. You can eat an opponent's piece by surrounding it with your pieces in your turn.
-  8. You can only eat a piece when its your turn.
-  9. A piece can only move to an adjacent empty space.
-  10. You can eat an opponent's piece if stuck with no empty spaces to move.
-  11. You can't eat the opponent's piece if it's in the center of the board.
-  12. You win by eating all the opponent's pieces.
-  13. You can have a small win by aligning all your pieces in a row or column, separating the board in two, with all the opponents pieces on one side.
-  14. The game draws if both players have 3 or less pieces.
-  */
   initializeTiles(board);
-  char text[100] = "1. The game is played on a 5x5 board.";
+  char text[100] = "The game is played on a 5x5 board.";
   al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
 }
 
@@ -710,7 +836,7 @@ void page1(struct tile board[5][5], ALLEGRO_FONT **font)
 void page2(struct tile board[5][5], ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont)
 {
   initializeTiles(board);
-  char text[100] = "3. Placement phase:";
+  char text[100] = "Placement phase:";
   char text1[100] = "Players take turns placing 2 of their pieces on the board each turn.";
   char text2[100] = "players CANNOT place their pieces in the middle during this phase.";
   board[2][2].color = al_map_rgb(255, 0, 0);
@@ -738,7 +864,7 @@ void adjacentSpaces(struct tile board[5][5])
 void page3(struct tile board[5][5], ALLEGRO_FONT **font)
 {
   initializeTiles(board);
-  char text[100] = "4. Movement phase:";
+  char text[100] = "Movement phase:";
   char text1[100] = "Players take turns moving their pieces to adjacent empty spaces.";
   al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
   al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 70, 0, text1);
@@ -748,7 +874,7 @@ void page3(struct tile board[5][5], ALLEGRO_FONT **font)
 void page4(struct tile board[5][5], ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont)
 {
   initializeTiles(board);
-  char text[100] = "5. Objective:";
+  char text[100] = "Objective:";
   char text1[100] = "The objective is to eat all the opponent's pieces.";
   char text2[100] = "You can eat an opponent's piece by surrounding it with your pieces in your turn.";
   al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
@@ -760,7 +886,7 @@ void page4(struct tile board[5][5], ALLEGRO_FONT **font, ALLEGRO_FONT **smallFon
 void page5(struct tile board[5][5], ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont)
 {
   initializeTiles(board);
-  char text[100] = "5. Objective:";
+  char text[100] = "Objective:";
   char text1[100] = "The objective is to eat all the opponent's pieces.";
   char text2[100] = "You can eat an opponent's piece by surrounding it with your pieces in your turn.";
   al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
