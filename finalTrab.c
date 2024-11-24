@@ -496,150 +496,158 @@ void checkEat(struct tile board[5][5], int x, int y, int turn)
   }
 }
 
-bool checkWinSide(int *piece1, int *piece2)
+void checkSmallWinPieces(int upPiece1, int upPiece2, int downPiece1, int downPiece2, bool *running, int turn, bool isXwin)
 {
-  if (*piece1 == 0 && *piece2 > 0)
-  {
-    *piece1 = 0;
-    *piece2 = 0;
-    return true;
-  }
-  else if (*piece2 == 0 && *piece1 > 0)
-  {
-    *piece1 = 0;
-    *piece2 = 0;
-    return true;
-  }
-  return false;
+  if (upPiece1 >= 0 && upPiece2 == 0 && downPiece1 == 0 && downPiece2 >= 0)
+    {
+      if (turn % 2 == 0)
+      {
+        printf("%d %d %d %d", upPiece1, upPiece2, downPiece1, downPiece2);
+        printf("Player 1 wins\n");
+        *running = false;
+      }
+      else
+      {
+        printf("%d %d %d %d", upPiece1, upPiece2, downPiece1, downPiece2);
+        printf("Player 2 wins\n");
+        *running = false;
+      }
+    }
+    else if (upPiece1 == 0 && upPiece2 >= 0 && downPiece1 >= 0 && downPiece2 == 0)
+    {
+      if (turn % 2 == 0)
+      {
+        printf("%d %d %d %d", upPiece1, upPiece2, downPiece1, downPiece2);
+        printf("Player 1 wins\n");
+        *running = false;
+      }
+      else
+      {
+        printf("%d %d %d %d", upPiece1, upPiece2, downPiece1, downPiece2);
+        printf("Player 2 wins\n");
+        *running = false;
+      }
+    }
 }
 
-bool checkSmallWinSide(struct tile board[5][5], int x, int y, bool xAxis)
+void checkSmallWinSides(struct tile board[5][5], int x, int y, bool *running, int turn, bool isXwin)
 {
-  int piece1 = 0;
-  int piece2 = 0;
-  if (xAxis)
+  int upPiece1 = 0;
+  int upPiece2 = 0;
+  int downPiece1 = 0;
+  int downPiece2 = 0;
+  if (isXwin)
   {
-    for (size_t i = 0; i < 5; i++)
+    for (int i = 0; i < 5; i++)
     {
-      for (size_t j = y; j < 5; j++)
+      for (int j = 0; j < y; j++)
       {
         if (board[i][j].piece == 1)
         {
-          piece1++;
+          upPiece1++;
         }
         else if (board[i][j].piece == 2)
         {
-          piece2++;
+          upPiece2++;
         }
       }
     }
-    if (checkWinSide(&piece1, &piece2))
+    for (int i = 0; i < 5; i++)
     {
-      return true;
-    }
-    for (size_t i = 0; i < 5; i++)
-    {
-      for (size_t j = 0; j < y; j++)
+      for (int j = y + 1; j < 5; j++)
       {
         if (board[i][j].piece == 1)
         {
-          piece1++;
+          downPiece1++;
         }
         else if (board[i][j].piece == 2)
         {
-          piece2++;
+          downPiece2++;
         }
       }
     }
-    return checkWinSide(&piece1, &piece2);
+    checkSmallWinPieces(upPiece1, upPiece2, downPiece1, downPiece2, running, turn, isXwin);
+  } else {
+    for (int i = 0; i < x; i++)
+    {
+      for (int j = 0; j < 5; j++)
+      {
+        if (board[i][j].piece == 1)
+        {
+          upPiece1++;
+        }
+        else if (board[i][j].piece == 2)
+        {
+          upPiece2++;
+        }
+      }
+    }
+    for (int i = x + 1; i < 5; i++)
+    {
+      for (int j = 0 ; j < 5; j++)
+      {
+        if (board[i][j].piece == 1)
+        {
+          downPiece1++;
+        }
+        else if (board[i][j].piece == 2)
+        {
+          downPiece2++;
+        }
+      }
+    }
+    checkSmallWinPieces(upPiece1, upPiece2, downPiece1, downPiece2, running, turn, isXwin);
   }
-  else
-  {
-    for (size_t i = x; i < 5; i++)
-    {
-      for (size_t j = 0; j < 5; j++)
-      {
-        if (board[i][j].piece == 1)
-        {
-          piece1++;
-        }
-        else if (board[i][j].piece == 2)
-        {
-          piece2++;
-        }
-      }
-    }
-    if (checkWinSide(&piece1, &piece2))
-    {
-      return true;
-    }
-    for (size_t i = 0; i < x; i++)
-    {
-      for (size_t j = 0; j < 5; j++)
-      {
-        if (board[i][j].piece == 1)
-        {
-          piece1++;
-        }
-        else if (board[i][j].piece == 2)
-        {
-          piece2++;
-        }
-      }
-    }
-    return checkWinSide(&piece1, &piece2);
-  }
-  return false;
 }
 
-void checkSmallWin(struct tile board[5][5], int x, int y, bool *running)
+void checkSmallWin(struct tile board[5][5], int x, int y, bool *running, int turn)
 {
-  int winX = 0;
-  int winY = 0;
-  int piece = board[x][y].piece;
-  for (size_t i = 0; i < 5; i++)
+  int xwin = 0;
+  int ywin = 0;
+  for (int i = 0; i < 5; i++)
   {
-    if (board[x][i].piece == piece)
+    if (turn % 2 == 0)
     {
-      winY++;
-    }
-    if (winY == 5 && x != 0 && x != 4)
-    {
-      if (checkSmallWinSide(board, x, y, false))
+      if (board[i][y].piece == 1)
       {
-        *running = false;
-        if (board[x][y].piece == 1)
-        {
-          printf("Player 1 Small Win!");
-        }
-        else if (board[x][y].piece == 2)
-        {
-          printf("Player 2 Small Win!");
-        }
+        xwin++;
+      }
+    }
+    else
+    {
+      if (board[i][y].piece == 2)
+      {
+        xwin++;
       }
     }
   }
-  for (size_t i = 0; i < 5; i++)
+
+  if (xwin == 5 && y != 0 && y != 4)
   {
-    if (board[i][y].piece == piece)
+    checkSmallWinSides(board, x, y, running, turn, true);
+  }
+
+  for (int i = 0; i < 5; i++)
+  {
+    if (turn % 2 == 0)
     {
-      winX++;
-    }
-    if (winX == 5 && x != 0 && x != 4)
-    {
-      if (checkSmallWinSide(board, x, y, false))
+      if (board[x][i].piece == 1)
       {
-        *running = false;
-        if (board[x][y].piece == 1)
-        {
-          printf("Player 1 Small Win!");
-        }
-        else if (board[x][y].piece == 2)
-        {
-          printf("Player 2 Small Win!");
-        }
+        ywin++;
       }
     }
+    else
+    {
+      if (board[x][i].piece == 2)
+      {
+        ywin++;
+      }
+    }
+  }
+
+  if (ywin == 5 && x != 0 && x != 4)
+  {
+    checkSmallWinSides(board, x, y, running, turn, false);
   }
 }
 
@@ -736,7 +744,7 @@ bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mo
           checkEat(board, i, j, *turn);
           checkDraw(board, *turn, running);
           checkWin(board, *turn, running);
-          checkSmallWin(board, i, j, running);
+          checkSmallWin(board, i, j, running, *turn);
           return true;
         }
       }
