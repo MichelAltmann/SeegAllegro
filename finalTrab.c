@@ -801,10 +801,16 @@ void onMouseClickHelpText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct
     *currentState = MAIN_MENU;
     break;
   case 1:
-    *page = *page - 1;
+    if (*page > 0)
+    {
+      *page = *page - 1;
+    }
     break;
   case 2:
-    *page = *page + 1;
+    if (*page < 11)
+    {
+      *page = *page + 1;
+    }
     break;
   default:
     break;
@@ -848,7 +854,7 @@ void page0(struct tile board[5][5], ALLEGRO_FONT **font)
 void page1(struct tile board[5][5], ALLEGRO_FONT **font)
 {
   initializeTiles(board);
-  char text[100] = "2. Each player has 12 pieces,";
+  char text[100] = "Each player has 12 pieces,";
   char text1[100] = "player 1 is red, and player 2 is blue.";
   board[1][2].piece = 1;
   board[3][2].piece = 2;
@@ -1015,12 +1021,21 @@ void page11(struct tile board[5][5], ALLEGRO_FONT **font)
   al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 55, 0, text);
   al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 85, 0, text1);
   al_draw_text(*font, al_map_rgb(200, 0, 0), getCenter(*font, text2), SCREEN_HEIGHT - al_get_font_line_height(*font), 0, text2);
-  board[3][2].piece = 2;
-  board[1][4].piece = 2;
-  board[1][3].piece = 2;
-  board[2][0].piece = 1;
+  board[0][0].piece = 1;
+  board[0][1].piece = 1;
+  board[1][2].piece = 1;
+  board[1][3].piece = 1;
   board[0][4].piece = 1;
-  board[4][3].piece = 1;
+  board[2][0].piece = 1;
+  board[2][1].piece = 1;
+  board[2][2].piece = 1;
+  board[2][3].piece = 1;
+  board[2][4].piece = 1;
+  board[4][0].piece = 2;
+  board[3][1].piece = 2;
+  board[3][3].piece = 2;
+  board[3][4].piece = 2;
+  board[4][2].piece = 2;
 }
 
 void helpView(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont, GameState *currentState, bool *running)
@@ -1331,6 +1346,7 @@ void computerMove(struct tile board[5][5], int turn, bool hasPossibilities, bool
     }
   }
 }
+
 void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, GameState *currentState, int turn, int pieces, struct tile board[5][5], double savedTime, bool isComputer)
 {
   bool gameRunning = true;
