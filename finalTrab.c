@@ -23,6 +23,7 @@ typedef enum
   MAIN_MENU,
   HELP,
   GAME,
+  GAME_COMPUTER,
   LOAD_GAME,
   GAME_OVER
 } GameState;
@@ -1244,7 +1245,93 @@ int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
   return -1;
 }
 
-void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, GameState *currentState, int turn, int pieces, struct tile board[5][5], double savedTime)
+void getPlayablePiece(struct tile board[5][5], bool hasPossibilities, int turn, bool *running)
+{
+  if (hasPossibilities)
+  {
+    bool tileUp = false;
+    bool tileDown = false;
+    bool tileLeft = false;
+    bool tileRight = false;
+    int i = 0, j = 0;
+    struct tile selectedTile = board[i][j];
+
+    onMouseClickTile(NULL, board, board[i][j].x1 + 1, board[i][j].y1 + 1, running, &turn, &selectedTile, hasPossibilities);
+  }
+}
+
+void computerMove(struct tile board[5][5], int turn, bool hasPossibilities, bool *running, struct tile *selectedTile)
+{
+  int x, y;
+  if (turn < 12)
+  {
+    do
+    {
+      x = rand() % 5;
+      y = rand() % 5;
+    } while (board[x][y].piece != 0 || board[x][y].id == 12);
+    putPiece(board, x, y, &turn);
+  }
+  else
+  {
+    bool up = false;
+    bool down = false;
+    bool left = false;
+    bool right = false;
+    bool pieceFound = false;
+    for (x = 0; x < 5 && !pieceFound; x++)
+    {
+      for (y = 0; y < 5 && !pieceFound; y++)
+      {
+        if (board[x][y].piece == 2)
+        {
+          setTilePossibility(board, x, y, hasPossibilities);
+          checkTilePossibilities(board, x, y, &up, &down, &left, &right);
+          if (up)
+          {
+            *selectedTile = board[x][y];
+            pieceFound = true;
+          }
+          else if (down)
+          {
+            *selectedTile = board[x][y];
+            pieceFound = true;
+          }
+          else if (left)
+          {
+            *selectedTile = board[x][y];
+            pieceFound = true;
+          }
+          else if (right)
+          {
+            *selectedTile = board[x][y];
+            pieceFound = true;
+          }
+        }
+      }
+    }
+
+    if (pieceFound)
+    {
+      for (x = 0; x < 5; x++)
+      {
+        for (y = 0; y < 5; y++)
+        {
+          if (board[x][y].positionable)
+          {
+            movePiece(board, x, y, selectedTile);
+            checkEat(board, x, y, turn);
+            checkDraw(board, turn, running);
+            checkWin(board, turn, running);
+            checkSmallWin(board, x, y, running, turn);
+            return;
+          }
+        }
+      }
+    }
+  }
+}
+void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, GameState *currentState, int turn, int pieces, struct tile board[5][5], double savedTime, bool isComputer)
 {
   bool gameRunning = true;
   struct text texts[1] = {0};
@@ -1290,7 +1377,20 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, Ga
 
       hasPossibilities = checkPossibilities(board, turn);
 
-      if (handleGameEvents(texts, running, display, board, font, &turn, &selectedTile, hasPossibilities, currentState, &isPaused, &currentTime, startTime) == 1)
+      if (isComputer && turn % 2 != 0)
+      {
+        computerMove(board, turn, hasPossibilities, running, &selectedTile);
+        pieces++;
+        if (pieces % 2 == 0 && pieces != 0 && pieces < 24)
+        {
+          turn++;
+        }
+        else if (pieces >= 24)
+        {
+          turn++;
+        }
+      }
+      else if (handleGameEvents(texts, running, display, board, font, &turn, &selectedTile, hasPossibilities, currentState, &isPaused, &currentTime, startTime) == 1)
       {
         pieces++;
         if (pieces % 2 == 0 && pieces != 0 && pieces < 24)
@@ -1315,7 +1415,8 @@ void onMouseClickMenuText(struct text texts[], int mouse_x, int mouse_y, bool *r
     *currentState = GAME;
     break;
   case 1:
-    printf("Player V.S Computer\n");
+    *menuRunning = false;
+    *currentState = GAME_COMPUTER;
     break;
   case 2:
     *menuRunning = false;
@@ -1411,11 +1512,14 @@ int main()
       helpView(&display, &font, &smallFont, &currentState, &running);
       break;
     case GAME:
-      startGame(&display, &font, &running, &currentState, turn, pieces, board, 0);
+      startGame(&display, &font, &running, &currentState, turn, pieces, board, 0, false);
+      break;
+    case GAME_COMPUTER:
+      startGame(&display, &font, &running, &currentState, turn, pieces, board, 0, true);
       break;
     case LOAD_GAME:
       loadGameState(board, &turn, "game_save.txt", &pieces, &savedTime);
-      startGame(&display, &font, &running, &currentState, turn, pieces, board, savedTime);
+      startGame(&display, &font, &running, &currentState, turn, pieces, board, savedTime, false);
       break;
     case GAME_OVER:
       // drawGameOver(winner);
