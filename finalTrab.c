@@ -4,6 +4,7 @@
 #include <allegro5/allegro_primitives.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #define SCREEN_WIDTH 1600
 #define SCREEN_HEIGHT 1200
@@ -1086,7 +1087,7 @@ void helpView(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **sma
   }
 }
 
-void saveGameState(struct tile board[5][5], int turn, char *filename, int pieces)
+void saveGameState(struct tile board[5][5], int turn, char *filename, int pieces, double currentTime)
 {
   FILE *file = fopen(filename, "w");
   if (file == NULL)
@@ -1096,6 +1097,7 @@ void saveGameState(struct tile board[5][5], int turn, char *filename, int pieces
   }
   fprintf(file, "%d\n", turn);
   fprintf(file, "%d\n", pieces);
+  fprintf(file, "%f\n", currentTime);
   for (size_t i = 0; i < 5; i++)
   {
     for (size_t j = 0; j < 5; j++)
@@ -1107,7 +1109,7 @@ void saveGameState(struct tile board[5][5], int turn, char *filename, int pieces
   fclose(file);
 }
 
-void loadGameState(struct tile board[5][5], int *turn, char *filename, int *pieces)
+void loadGameState(struct tile board[5][5], int *turn, char *filename, int *pieces, double *currentTime)
 {
   FILE *file = fopen(filename, "r");
   if (file == NULL)
@@ -1117,6 +1119,7 @@ void loadGameState(struct tile board[5][5], int *turn, char *filename, int *piec
   }
   fscanf(file, "%d", turn);
   fscanf(file, "%d", pieces);
+  fscanf(file, "%lf", currentTime);
   for (size_t i = 0; i < 5; i++)
   {
     for (size_t j = 0; j < 5; j++)
@@ -1127,7 +1130,7 @@ void loadGameState(struct tile board[5][5], int *turn, char *filename, int *piec
   fclose(file);
 }
 
-void onMouseClickPauseMenuText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], int mouse_x, int mouse_y, GameState *currentState, bool *isPaused, bool *gameRunning, struct tile board[5][5], int turn, int pieces)
+void onMouseClickPauseMenuText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], int mouse_x, int mouse_y, GameState *currentState, bool *isPaused, bool *gameRunning, struct tile board[5][5], int turn, int pieces, double currentTime, bool *saved)
 {
   switch (mouseClickText(texts, mouse_x, mouse_y, 3))
   {
@@ -1135,8 +1138,8 @@ void onMouseClickPauseMenuText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, s
     *isPaused = false;
     break;
   case 1:
-    saveGameState(board, turn, "game_save.txt", pieces);
-    al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, "Game saved"), SCREEN_HEIGHT - 40, 0, "Game saved");
+    saveGameState(board, turn, "game_save.txt", pieces, currentTime);
+    *saved = true;
     break;
   case 2:
     *isPaused = false;
@@ -1148,7 +1151,7 @@ void onMouseClickPauseMenuText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, s
   }
 }
 
-int handlePauseMenuEvents(struct text texts[], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, GameState *currentState, bool *isPaused, bool *gameRunning, struct tile board[5][5], int turn, int pieces)
+void handlePauseMenuEvents(struct text texts[], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, GameState *currentState, bool *isPaused, bool *gameRunning, struct tile board[5][5], int turn, int pieces, double currentTime, bool *saved)
 {
   bool hoveringText = false;
   ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
@@ -1166,12 +1169,10 @@ int handlePauseMenuEvents(struct text texts[], ALLEGRO_DISPLAY **display, ALLEGR
     hoveringText = isHoveringText(texts, mouse_x, mouse_y, 3);
     if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
     {
-      onMouseClickPauseMenuText(display, font, texts, mouse_x, mouse_y, currentState, isPaused, gameRunning, board, turn, pieces);
-      return 0;
+      onMouseClickPauseMenuText(display, font, texts, mouse_x, mouse_y, currentState, isPaused, gameRunning, board, turn, pieces, currentTime, saved);
     }
     al_destroy_event_queue(event_queue);
   }
-  return -1;
 }
 
 void initializePauseMenuTexts(struct text texts[], ALLEGRO_FONT *font)
@@ -1185,27 +1186,39 @@ void initializePauseMenuTexts(struct text texts[], ALLEGRO_FONT *font)
   texts[2] = createText(2, getCenter(font, exit), 140, exit, al_map_rgb(0, 0, 0), HOVER, font);
 }
 
-void pauseMenu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], GameState *currentState, bool *isPaused, bool *gameRunning, size_t textLength, struct tile board[5][5], int turn, int pieces)
+void pauseMenu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], GameState *currentState, bool *isPaused, bool *gameRunning, size_t textLength, struct tile board[5][5], int turn, int pieces, double currentTime, bool *saved)
 {
   al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, "GAME IS PAUSED"), 10, 0, "GAME IS PAUSED");
 
   drawText(texts, textLength);
 
-  handlePauseMenuEvents(texts, display, font, currentState, isPaused, gameRunning, board, turn, pieces);
-
   al_flip_display();
+
+  if (*saved)
+  {
+    al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, "Game saved"), SCREEN_HEIGHT - 40, 0, "Game saved");
+  }
+
+  handlePauseMenuEvents(texts, display, font, currentState, isPaused, gameRunning, board, turn, pieces, currentTime, saved);
 }
 
-int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, struct tile board[5][5], ALLEGRO_FONT **font, int *round, struct tile *selectedTile, bool hasPossibilities, GameState *currentState, bool *isPaused)
+int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, struct tile board[5][5], ALLEGRO_FONT **font, int *round, struct tile *selectedTile, bool hasPossibilities, GameState *currentState, bool *isPaused, double *currentTime, time_t startTime)
 {
   bool hoveringTile = false;
   bool hoveringText = false;
+  ALLEGRO_TIMER *timer = al_create_timer(1.0 / 60.0);
   ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
+  al_register_event_source(event_queue, al_get_timer_event_source(timer));
   ALLEGRO_EVENT ev;
+  al_start_timer(timer);
   al_wait_for_event(event_queue, &ev);
   if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
   {
     al_destroy_display(*display);
+  }
+  else if (ev.type == ALLEGRO_EVENT_TIMER)
+  {
+    *currentTime = difftime(time(NULL), startTime);
   }
   else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
   {
@@ -1227,10 +1240,11 @@ int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
       *isPaused = true;
     }
   }
+  al_destroy_timer(timer);
   return -1;
 }
 
-void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, GameState *currentState,int turn, int pieces, struct tile board[5][5])
+void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, GameState *currentState, int turn, int pieces, struct tile board[5][5], double savedTime)
 {
   bool gameRunning = true;
   struct text texts[1] = {0};
@@ -1239,19 +1253,36 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, Ga
   struct tile selectedTile = {0};
   bool hasPossibilities = false;
   bool isPaused = false;
+  bool saved = false;
   initializePauseMenuTexts(textsMenu, *font);
+  time_t startTime = time(NULL);
+  double elapsedTime = 0;
+  double currentTime = savedTime;
+
+  if (savedTime != 0)
+  {
+    startTime = time(NULL) - currentTime;
+    elapsedTime = currentTime;
+  }
   while (gameRunning)
   {
     if (isPaused)
     {
-      pauseMenu(display, font, textsMenu, currentState, &isPaused, &gameRunning, sizeof(textsMenu) / sizeof(textsMenu[0]), board, turn, pieces);
+      pauseMenu(display, font, textsMenu, currentState, &isPaused, &gameRunning, sizeof(textsMenu) / sizeof(textsMenu[0]), board, turn, pieces, currentTime, &saved);
+      if (!isPaused)
+      {
+        startTime = time(NULL) - currentTime;
+        saved = false;
+      }
     }
     else
     {
+      currentTime = difftime(time(NULL), startTime);
+      elapsedTime = currentTime;
       al_clear_to_color(al_map_rgb(255, 255, 255));
       drawText(texts, sizeof(texts) / sizeof(texts[0]));
       drawBoard(board);
-
+      al_draw_textf(*font, al_map_rgb(0, 0, 0), SCREEN_WIDTH - 400, 20, 0, "Time: %.0f", currentTime);
       al_draw_text(*font, al_map_rgb(0, 0, 0), 10, 10, 0, "Turn: ");
       al_draw_textf(*font, turn % 2 == 0 ? al_map_rgb(200, 0, 0) : al_map_rgb(0, 0, 200), 100, 10, 0, "%s", turn % 2 == 0 ? "Player 1" : "Player 2");
 
@@ -1259,7 +1290,7 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, Ga
 
       hasPossibilities = checkPossibilities(board, turn);
 
-      if (handleGameEvents(texts, running, display, board, font, &turn, &selectedTile, hasPossibilities, currentState, &isPaused) == 1)
+      if (handleGameEvents(texts, running, display, board, font, &turn, &selectedTile, hasPossibilities, currentState, &isPaused, &currentTime, startTime) == 1)
       {
         pieces++;
         if (pieces % 2 == 0 && pieces != 0 && pieces < 24)
@@ -1366,6 +1397,7 @@ int main()
   int pieces = 0;
   struct tile board[5][5] = {0};
   initializeTiles(board);
+  double savedTime = 0;
   while (running)
   {
     al_clear_to_color(al_map_rgb(255, 255, 255));
@@ -1379,11 +1411,11 @@ int main()
       helpView(&display, &font, &smallFont, &currentState, &running);
       break;
     case GAME:
-      startGame(&display, &font, &running, &currentState, turn, pieces, board);
+      startGame(&display, &font, &running, &currentState, turn, pieces, board, 0);
       break;
     case LOAD_GAME:
-      loadGameState(board, &turn, "game_save.txt", &pieces);
-      startGame(&display, &font, &running, &currentState, turn, pieces, board);
+      loadGameState(board, &turn, "game_save.txt", &pieces, &savedTime);
+      startGame(&display, &font, &running, &currentState, turn, pieces, board, savedTime);
       break;
     case GAME_OVER:
       // drawGameOver(winner);
