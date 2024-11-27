@@ -24,8 +24,7 @@ typedef enum
   HELP,
   GAME,
   GAME_COMPUTER,
-  LOAD_GAME,
-  GAME_OVER
+  LOAD_GAME
 } GameState;
 
 struct tile
@@ -506,41 +505,37 @@ void checkEat(struct tile board[5][5], int x, int y, int turn)
   }
 }
 
-void checkSmallWinPieces(int upPiece1, int upPiece2, int downPiece1, int downPiece2, bool *running, int turn, bool isXwin)
+void checkSmallWinPieces(int upPiece1, int upPiece2, int downPiece1, int downPiece2, bool *running, int turn, bool isXwin, int *winner)
 {
   if (upPiece1 >= 0 && upPiece2 == 0 && downPiece1 == 0 && downPiece2 >= 0)
   {
     if (turn % 2 == 0)
     {
-      printf("%d %d %d %d", upPiece1, upPiece2, downPiece1, downPiece2);
+      *winner = 1;
       printf("Player 1 wins\n");
-      *running = false;
     }
     else
     {
-      printf("%d %d %d %d", upPiece1, upPiece2, downPiece1, downPiece2);
+      *winner = 2;
       printf("Player 2 wins\n");
-      *running = false;
     }
   }
   else if (upPiece1 == 0 && upPiece2 >= 0 && downPiece1 >= 0 && downPiece2 == 0)
   {
     if (turn % 2 == 0)
     {
-      printf("%d %d %d %d", upPiece1, upPiece2, downPiece1, downPiece2);
+      *winner = 1;
       printf("Player 1 wins\n");
-      *running = false;
     }
     else
     {
-      printf("%d %d %d %d", upPiece1, upPiece2, downPiece1, downPiece2);
+      *winner = 2;
       printf("Player 2 wins\n");
-      *running = false;
     }
   }
 }
 
-void checkSmallWinSides(struct tile board[5][5], int x, int y, bool *running, int turn, bool isXwin)
+void checkSmallWinSides(struct tile board[5][5], int x, int y, bool *running, int turn, bool isXwin, int *winner)
 {
   int upPiece1 = 0;
   int upPiece2 = 0;
@@ -576,7 +571,7 @@ void checkSmallWinSides(struct tile board[5][5], int x, int y, bool *running, in
         }
       }
     }
-    checkSmallWinPieces(upPiece1, upPiece2, downPiece1, downPiece2, running, turn, isXwin);
+    checkSmallWinPieces(upPiece1, upPiece2, downPiece1, downPiece2, running, turn, isXwin, winner);
   }
   else
   {
@@ -608,11 +603,11 @@ void checkSmallWinSides(struct tile board[5][5], int x, int y, bool *running, in
         }
       }
     }
-    checkSmallWinPieces(upPiece1, upPiece2, downPiece1, downPiece2, running, turn, isXwin);
+    checkSmallWinPieces(upPiece1, upPiece2, downPiece1, downPiece2, running, turn, isXwin, winner);
   }
 }
 
-void checkSmallWin(struct tile board[5][5], int x, int y, bool *running, int turn)
+void checkSmallWin(struct tile board[5][5], int x, int y, bool *running, int turn, int *winner)
 {
   int xwin = 0;
   int ywin = 0;
@@ -636,7 +631,7 @@ void checkSmallWin(struct tile board[5][5], int x, int y, bool *running, int tur
 
   if (xwin == 5 && y != 0 && y != 4)
   {
-    checkSmallWinSides(board, x, y, running, turn, true);
+    checkSmallWinSides(board, x, y, running, turn, true, winner);
   }
 
   for (int i = 0; i < 5; i++)
@@ -659,11 +654,11 @@ void checkSmallWin(struct tile board[5][5], int x, int y, bool *running, int tur
 
   if (ywin == 5 && x != 0 && x != 4)
   {
-    checkSmallWinSides(board, x, y, running, turn, false);
+    checkSmallWinSides(board, x, y, running, turn, false, winner);
   }
 }
 
-void checkWin(struct tile board[5][5], int turn, bool *running)
+void checkWin(struct tile board[5][5], int turn, bool *running, int *winner)
 {
   int player1 = 0;
   int player2 = 0;
@@ -684,16 +679,16 @@ void checkWin(struct tile board[5][5], int turn, bool *running)
   if (player1 == 0)
   {
     printf("Player 2 wins\n");
-    *running = false;
+    *winner = 2;
   }
   else if (player2 == 0)
   {
     printf("Player 1 wins\n");
-    *running = false;
+    *winner = 1;
   }
 }
 
-void checkDraw(struct tile board[5][5], int turn, bool *running)
+void checkDraw(struct tile board[5][5], int turn, bool *running, int *winner)
 {
   int player1 = 0;
   int player2 = 0;
@@ -714,7 +709,7 @@ void checkDraw(struct tile board[5][5], int turn, bool *running)
   if (player1 <= 3 && player2 <= 3)
   {
     printf("Draw\n");
-    *running = false;
+    *winner = 3;
   }
 }
 
@@ -726,7 +721,7 @@ void movePiece(struct tile board[5][5], int x, int y, struct tile *selectedTile)
   clearPositionable(board);
 }
 
-bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mouse_x, int mouse_y, bool *running, int *turn, struct tile *selectedTile, bool hasPossibilities)
+bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mouse_x, int mouse_y, bool *running, int *turn, struct tile *selectedTile, bool hasPossibilities, int *winner)
 {
   int clickedTileId = mouseClickTile(board, mouse_x, mouse_y);
   for (size_t i = 0; i < 5; i++)
@@ -754,9 +749,9 @@ bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mo
         {
           movePiece(board, i, j, selectedTile);
           checkEat(board, i, j, *turn);
-          checkDraw(board, *turn, running);
-          checkWin(board, *turn, running);
-          checkSmallWin(board, i, j, running, *turn);
+          checkDraw(board, *turn, running, winner);
+          checkWin(board, *turn, running, winner);
+          checkSmallWin(board, i, j, running, *turn, winner);
           return true;
         }
       }
@@ -1218,7 +1213,7 @@ void pauseMenu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts
   handlePauseMenuEvents(texts, display, font, currentState, isPaused, gameRunning, board, turn, pieces, currentTime, saved);
 }
 
-int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, struct tile board[5][5], ALLEGRO_FONT **font, int *round, struct tile *selectedTile, bool hasPossibilities, GameState *currentState, bool *isPaused, double *currentTime, time_t startTime)
+int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, struct tile board[5][5], ALLEGRO_FONT **font, int *round, struct tile *selectedTile, bool hasPossibilities, GameState *currentState, bool *isPaused, double *currentTime, time_t startTime, int *winner)
 {
   bool hoveringTile = false;
   bool hoveringText = false;
@@ -1246,7 +1241,7 @@ int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
     ;
     if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringTile)
     {
-      if (onMouseClickTile(display, board, mouse_x, mouse_y, running, round, selectedTile, hasPossibilities))
+      if (onMouseClickTile(display, board, mouse_x, mouse_y, running, round, selectedTile, hasPossibilities, winner))
       {
         return 1;
       }
@@ -1260,22 +1255,22 @@ int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
   return -1;
 }
 
-void getPlayablePiece(struct tile board[5][5], bool hasPossibilities, int turn, bool *running)
-{
-  if (hasPossibilities)
-  {
-    bool tileUp = false;
-    bool tileDown = false;
-    bool tileLeft = false;
-    bool tileRight = false;
-    int i = 0, j = 0;
-    struct tile selectedTile = board[i][j];
+// void getPlayablePiece(struct tile board[5][5], bool hasPossibilities, int turn, bool *running, int *winner)
+// {
+//   if (hasPossibilities)
+//   {
+//     bool tileUp = false;
+//     bool tileDown = false;
+//     bool tileLeft = false;
+//     bool tileRight = false;
+//     int i = 0, j = 0;
+//     struct tile selectedTile = board[i][j];
 
-    onMouseClickTile(NULL, board, board[i][j].x1 + 1, board[i][j].y1 + 1, running, &turn, &selectedTile, hasPossibilities);
-  }
-}
+//     onMouseClickTile(NULL, board, board[i][j].x1 + 1, board[i][j].y1 + 1, running, &turn, &selectedTile, hasPossibilities, winner);
+//   }
+// }
 
-void computerMove(struct tile board[5][5], int turn, bool hasPossibilities, bool *running, struct tile *selectedTile)
+void computerMove(struct tile board[5][5], int turn, bool hasPossibilities, bool *running, struct tile *selectedTile, int *winner)
 {
   int x, y;
   if (turn < 12)
@@ -1336,9 +1331,9 @@ void computerMove(struct tile board[5][5], int turn, bool hasPossibilities, bool
           {
             movePiece(board, x, y, selectedTile);
             checkEat(board, x, y, turn);
-            checkDraw(board, turn, running);
-            checkWin(board, turn, running);
-            checkSmallWin(board, x, y, running, turn);
+            checkDraw(board, turn, running, winner);
+            checkWin(board, turn, running, winner);
+            checkSmallWin(board, x, y, running, turn, winner);
             return;
           }
         }
@@ -1347,7 +1342,82 @@ void computerMove(struct tile board[5][5], int turn, bool hasPossibilities, bool
   }
 }
 
-void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, GameState *currentState, int turn, int pieces, struct tile board[5][5], double savedTime, bool isComputer)
+void onMouseClickGameOverText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], int mouse_x, int mouse_y, bool *running, GameState *currentState, bool isComputer)
+{
+  switch (mouseClickText(texts, mouse_x, mouse_y, 2))
+  {
+  case 0:
+    *running = false;
+    *currentState = GAME;
+    break;
+  case 1:
+    *running = false;
+    *currentState = MAIN_MENU;
+    break;
+  default:
+    break;
+  }
+}
+
+int handleGameOverEvents(struct text texts[], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, GameState *currentState, bool isComputer)
+{
+  ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
+  ALLEGRO_EVENT ev;
+  bool hoveringText = false;
+  al_wait_for_event(event_queue, &ev);
+  if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
+  {
+    al_destroy_display(*display);
+  }
+  else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
+  {
+    int mouse_x = ev.mouse.x;
+    int mouse_y = ev.mouse.y;
+
+    hoveringText = isHoveringText(texts, mouse_x, mouse_y, 2);
+    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
+    {
+      onMouseClickGameOverText(display, font, texts, mouse_x, mouse_y, running, currentState, isComputer);
+    }
+  }
+  return -1;
+}
+
+void drawGameOver(int *winner, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, GameState *currentState, bool isComputer)
+{
+  bool gameOverRunning = true;
+  char text[20];
+  char text1[20] = "Play Again";
+  char text2[20] = "Back to Menu";
+  struct text texts[2] = {0};
+
+  texts[0] = createText(0, getCenter(*font, text1), 180, text1, al_map_rgb(0, 0, 0), HOVER, *font);
+  texts[1] = createText(1, getCenter(*font, text2), 210, text2, al_map_rgb(0, 0, 0), HOVER, *font);
+
+  sprintf(text, "Player %d Wins!", *winner);
+  while (gameOverRunning)
+  {
+    al_clear_to_color(al_map_rgb(255, 255, 255));
+    al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, "GAME OVER"), 120, 0, "GAME OVER");
+    if (*winner != 3)
+    {
+      al_draw_textf(*font, *winner == 2 ? al_map_rgb(0, 0, 200) : al_map_rgb(200, 0, 0), getCenter(*font, text), 150, 0, "%s", text);
+    }
+    else
+    {
+      al_draw_text(*font, al_map_rgb(150, 0, 150), getCenter(*font, "Draw!"), 150, 0, "Draw!");
+    }
+
+    drawText(texts, sizeof(texts) / sizeof(texts[0]));
+
+    handleGameOverEvents(texts, display, font, &gameOverRunning, currentState, isComputer);
+
+    al_flip_display();
+  }
+  *winner = 0;
+}
+
+void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, GameState *currentState, int turn, int pieces, struct tile board[5][5], double savedTime, bool isComputer, int *winner)
 {
   bool gameRunning = true;
   struct text texts[1] = {0};
@@ -1395,7 +1465,7 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, Ga
 
       if (isComputer && turn % 2 != 0)
       {
-        computerMove(board, turn, hasPossibilities, running, &selectedTile);
+        computerMove(board, turn, hasPossibilities, running, &selectedTile, winner);
         pieces++;
         if (pieces % 2 == 0 && pieces != 0 && pieces < 24)
         {
@@ -1406,7 +1476,7 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, Ga
           turn++;
         }
       }
-      else if (handleGameEvents(texts, running, display, board, font, &turn, &selectedTile, hasPossibilities, currentState, &isPaused, &currentTime, startTime) == 1)
+      else if (handleGameEvents(texts, running, display, board, font, &turn, &selectedTile, hasPossibilities, currentState, &isPaused, &currentTime, startTime, winner) == 1)
       {
         pieces++;
         if (pieces % 2 == 0 && pieces != 0 && pieces < 24)
@@ -1417,6 +1487,11 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, Ga
         {
           turn++;
         }
+      }
+      if (*winner > 0)
+      {
+        gameRunning = false;
+        drawGameOver(winner, display, font, currentState, isComputer);
       }
     }
   }
@@ -1510,13 +1585,14 @@ int main()
 
   initializeAllegro(&display, &font, &smallFont);
   bool running = true;
-  int turn = 0;
-  int pieces = 0;
-  struct tile board[5][5] = {0};
-  initializeTiles(board);
   double savedTime = 0;
+  int winner = 0;
   while (running)
   {
+    int turn = 0;
+    int pieces = 0;
+    struct tile board[5][5] = {0};
+    initializeTiles(board);
     al_clear_to_color(al_map_rgb(255, 255, 255));
 
     switch (currentState)
@@ -1528,18 +1604,14 @@ int main()
       helpView(&display, &font, &smallFont, &currentState, &running);
       break;
     case GAME:
-      startGame(&display, &font, &running, &currentState, turn, pieces, board, 0, false);
+      startGame(&display, &font, &running, &currentState, turn, pieces, board, 0, false, &winner);
       break;
     case GAME_COMPUTER:
-      startGame(&display, &font, &running, &currentState, turn, pieces, board, 0, true);
+      startGame(&display, &font, &running, &currentState, turn, pieces, board, 0, true, &winner);
       break;
     case LOAD_GAME:
       loadGameState(board, &turn, "game_save.txt", &pieces, &savedTime);
-      startGame(&display, &font, &running, &currentState, turn, pieces, board, savedTime, false);
-      break;
-    case GAME_OVER:
-      // drawGameOver(winner);
-      // handleGameOverEvents(&currentState, &running);
+      startGame(&display, &font, &running, &currentState, turn, pieces, board, savedTime, false, &winner);
       break;
     }
 
