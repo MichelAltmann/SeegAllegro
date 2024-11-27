@@ -1,0 +1,20 @@
+
+Turns: 29
+Time: 4.00
+Result: 3
+Winner: 3
+
+Turns: 29
+Time: 4.00
+Result: 1
+Winner: 1
+
+Turns: 29
+Time: 4.00
+Result: 1
+Winner: 2
+
+Turns: 29
+Time: 4.00
+Result: 2
+Winner: 1
