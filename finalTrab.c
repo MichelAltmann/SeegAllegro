@@ -1448,8 +1448,8 @@ void initializePauseMenuTexts(struct text texts[], ALLEGRO_FONT *font)
   char exit[10] = "Exit";
 
   texts[0] = createText(0, getCenter(font, resume), 60, resume, al_map_rgb(0, 0, 0), HOVER, font);
-  texts[1] = createText(1, getCenter(font, saveGame), 100, saveGame, al_map_rgb(0, 0, 0), HOVER, font);
-  texts[2] = createText(2, getCenter(font, exit), 140, exit, al_map_rgb(0, 0, 0), HOVER, font);
+  texts[1] = createText(1, getCenter(font, saveGame), 120, saveGame, al_map_rgb(0, 0, 0), HOVER, font);
+  texts[2] = createText(2, getCenter(font, exit), 180, exit, al_map_rgb(0, 0, 0), HOVER, font);
 }
 
 void pauseMenu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], GameState *currentState, bool *isPaused, bool *gameRunning, size_t textLength, struct tile board[5][5], int turn, int pieces, double currentTime, bool *saved, bool isComputer)
@@ -1472,7 +1472,7 @@ int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
 {
   bool hoveringTile = false;
   bool hoveringText = false;
-  ALLEGRO_TIMER *timer = al_create_timer(1.0 / 60.0);
+  ALLEGRO_TIMER *timer = al_create_timer(1.0 / 20.0);
   ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
   al_register_event_source(event_queue, al_get_timer_event_source(timer));
   ALLEGRO_EVENT ev;
@@ -1642,8 +1642,8 @@ void drawGameOver(int *winner, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, G
   char text2[20] = "Back to Menu";
   struct text texts[2] = {0};
 
-  texts[0] = createText(0, getCenter(*font, text1), 180, text1, al_map_rgb(0, 0, 0), HOVER, *font);
-  texts[1] = createText(1, getCenter(*font, text2), 210, text2, al_map_rgb(0, 0, 0), HOVER, *font);
+  texts[0] = createText(0, getCenter(*font, text1), 240, text1, al_map_rgb(0, 0, 0), HOVER, *font);
+  texts[1] = createText(1, getCenter(*font, text2), 300, text2, al_map_rgb(0, 0, 0), HOVER, *font);
 
   sprintf(text, "Player %d Wins!", *winner);
   while (gameOverRunning)
@@ -1652,11 +1652,11 @@ void drawGameOver(int *winner, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, G
     al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, "GAME OVER"), 120, 0, "GAME OVER");
     if (*winner != 3)
     {
-      al_draw_textf(*font, *winner == 2 ? al_map_rgb(0, 0, 200) : al_map_rgb(200, 0, 0), getCenter(*font, text), 150, 0, "%s", text);
+      al_draw_textf(*font, *winner == 2 ? al_map_rgb(0, 0, 200) : al_map_rgb(200, 0, 0), getCenter(*font, text), 180, 0, "%s", text);
     }
     else
     {
-      al_draw_text(*font, al_map_rgb(150, 0, 150), getCenter(*font, "Draw!"), 150, 0, "Draw!");
+      al_draw_text(*font, al_map_rgb(150, 0, 150), getCenter(*font, "Draw!"), 180, 0, "Draw!");
     }
 
     drawText(texts, sizeof(texts) / sizeof(texts[0]));
@@ -1708,7 +1708,7 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, Ga
       al_clear_to_color(al_map_rgb(255, 255, 255));
       drawText(texts, sizeof(texts) / sizeof(texts[0]));
       drawBoard(board);
-      al_draw_textf(*font, al_map_rgb(0, 0, 0), SCREEN_WIDTH - 400, 20, 0, "Time: %.0f", currentTime);
+      al_draw_textf(*font, al_map_rgb(0, 0, 0), 10, 40, 0, "Time: %.0f", currentTime);
       al_draw_text(*font, al_map_rgb(0, 0, 0), 10, 10, 0, "Turn: ");
       al_draw_textf(*font, turn % 2 == 0 ? al_map_rgb(200, 0, 0) : al_map_rgb(0, 0, 200), 100, 10, 0, "%s", turn % 2 == 0 ? "Player 1" : "Player 2");
 
