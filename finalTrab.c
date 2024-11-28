@@ -1574,41 +1574,107 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, Ga
   }
 }
 
-void drawGames(Game *games, int gameCount, ALLEGRO_FONT **font, bool isComputer, int longestGame)
+void drawGames(Game *games, int gameCount, ALLEGRO_FONT **font, bool isComputer, int longestGame, int shortestGame, int scrollOffset)
 {
-  char text[100];
-  sprintf(text, "Game %d: %.f Seconds", longestGame + 1, games[longestGame].time);
+  char longest[100];
+  sprintf(longest, "Game %d: %.f Seconds", longestGame + 1, games[longestGame].time);
+  char shortest[100];
+  sprintf(shortest, "Game %d: %.f Seconds", shortestGame + 1, games[shortestGame].time);
 
-  int x = isComputer ? 10 : 400;
+  int x = isComputer ? SCREEN_WIDTH / 2 - 350 : SCREEN_WIDTH / 2 + 50;
+  int y = 80 - scrollOffset;
 
-  al_draw_text(*font, al_map_rgb(0, 0, 0), x, 10, 0, isComputer ? "Player vs Computer" : "Player vs Player");
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, "Games History"), y - 60, 0, "Games History");
 
-  al_draw_text(*font, al_map_rgb(0, 0, 0), x, 60, 0, "Longest Game:");
-  al_draw_text(*font, al_map_rgb(0, 0, 0), x, 90, 0, text);
+  al_draw_text(*font, isComputer ? al_map_rgb(150, 10, 100) : al_map_rgb(0, 150, 150), x, y, 0, isComputer ? "Player vs Computer" : "Player vs Player");
+
+  y += al_get_font_line_height(*font);
+
+  al_draw_textf(*font, isComputer ? al_map_rgb(150, 10, 100) : al_map_rgb(0, 150, 150), x, y, 0, "Total Games: %d", gameCount);
+
+  y += 2 * al_get_font_line_height(*font);
+
+  al_draw_text(*font, al_map_rgb(0, 0, 0), x, y, 0, "Longest Game:");
+  y += al_get_font_line_height(*font);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), x, y, 0, longest);
+
+  y += 2 * al_get_font_line_height(*font);
+
+  al_draw_text(*font, al_map_rgb(0, 0, 0), x, y, 0, "Shortest Game:");
+  y += al_get_font_line_height(*font);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), x, y, 0, shortest);
+
+  y += 2 * al_get_font_line_height(*font);
 
   for (size_t i = 0; i < gameCount; i++)
   {
-    al_draw_textf(*font, al_map_rgb(0, 0, 0), x, 140 + i * 160, 0, "Game %zu", i + 1);
+    al_draw_filled_rectangle(x - 10, y - 10, x + 280, y + 200, isComputer ? al_map_rgb(255, 200, 255) : al_map_rgb(200, 255, 255));
 
-    al_draw_textf(*font, al_map_rgb(0, 0, 0), x, 170 + i * 160, 0, "Turns: %d", games[i].turns);
+    al_draw_textf(*font, al_map_rgb(0, 0, 0), x, y, 0, "Game %zu", i + 1);
 
-    al_draw_textf(*font, al_map_rgb(0, 0, 0), x, 200 + i * 160, 0, "Time: %.f Seconds", games[i].time);
+    y += al_get_font_line_height(*font);
+
+    al_draw_textf(*font, al_map_rgb(0, 0, 0), x, y, 0, "Turns: %d", games[i].turns);
+
+    y += al_get_font_line_height(*font);
+
+    al_draw_textf(*font, al_map_rgb(0, 0, 0), x, y, 0, "Time: %.f Seconds", games[i].time);
+
+    y += al_get_font_line_height(*font);
 
     al_draw_textf(*font, games[i].winner == 1 ? al_map_rgb(200, 0, 0) : games[i].winner == 2 ? al_map_rgb(0, 0, 200)
                                                                                              : al_map_rgb(150, 0, 150),
-                  x, 230 + i * 160, 0, "Winner: %s", games[i].winner == 1 ? "Player 1" : games[i].winner == 2 ? "Player 2"
-                                                                                                              : "None");
+                  x, y, 0, "Winner: %s", games[i].winner == 1 ? "Player 1" : games[i].winner == 2 ? "Player 2"
+                                                                                                  : "None");
 
-    al_draw_textf(*font, al_map_rgb(0, 0, 0), x, 260 + i * 160, 0, "Result: %s", games[i].result == 1 ? "Win" : games[i].result == 2 ? "Small Win"
-                                                                                                                                     : "Draw");
+    y += al_get_font_line_height(*font);
+
+    al_draw_textf(*font, al_map_rgb(0, 0, 0), x, y, 0, "Result: %s", games[i].result == 1 ? "Win" : games[i].result == 2 ? "Small Win"
+                                                                                                                         : "Draw");
+
+    y += al_get_font_line_height(*font);
+    y += al_get_font_line_height(*font);
   }
+}
+
+int handleHistoryEvents(struct text texts[], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, GameState *currentState, int *scrollOffset, int maxScroll)
+{
+  ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
+  ALLEGRO_EVENT ev;
+  bool hoveringText = false;
+  al_wait_for_event(event_queue, &ev);
+  if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
+  {
+    al_destroy_display(*display);
+  }
+  else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
+  {
+    int mouse_x = ev.mouse.x;
+    int mouse_y = ev.mouse.y;
+    *scrollOffset -= ev.mouse.dz * 10;
+    hoveringText = isHoveringText(texts, mouse_x, mouse_y, 1);
+    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
+    {
+      *running = false;
+      *currentState = MAIN_MENU;
+    }
+    if (*scrollOffset < 0)
+    {
+      *scrollOffset = 0;
+    }
+    else if (*scrollOffset > maxScroll)
+    {
+      *scrollOffset = maxScroll;
+    }
+  }
+  return -1;
 }
 
 void showHistory(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, GameState *currentState, Game *games, int gameCount)
 {
   bool historyRunning = true;
   struct text texts[1] = {0};
-  texts[0] = createText(0, SCREEN_WIDTH - al_get_text_width(*font, "Back"), 20, "Back", al_map_rgb(0, 0, 0), HOVER, *font);
+  texts[0] = createText(0, 20, 20, "Back", al_map_rgb(0, 0, 0), HOVER, *font);
 
   Game *computerGames = malloc(gameCount * sizeof(Game));
   Game *playerGames = malloc(gameCount * sizeof(Game));
@@ -1616,47 +1682,54 @@ void showHistory(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, GameState *curr
   int players = 0;
   int longestPlayerGame = 0;
   int longestComputerGame = 0;
-  int lowestPlayerGame = 0;
-  int lowestComputerGame = 0;
+  int shortestPlayerGame = 0;
+  int shortestComputerGame = 0;
 
   for (size_t i = 0; i < gameCount; i++)
   {
     if (games[i].isComputer)
     {
-      computerGames[computers++] = games[i];
+      computerGames[computers] = games[i];
+      if (computers == 0 || games[i].time > computerGames[longestComputerGame].time)
+      {
+        longestComputerGame = computers;
+      }
+      if (computers == 0 || games[i].time < computerGames[shortestComputerGame].time)
+      {
+        shortestComputerGame = computers;
+      }
+      computers++;
     }
     else
     {
-      playerGames[players++] = games[i];
-    }
-    if (playerGames[i].time > playerGames[longestPlayerGame].time)
-    {
-      longestPlayerGame = i;
-    }
-    if (playerGames[i].time < playerGames[lowestPlayerGame].time)
-    {
-      lowestPlayerGame = i;
-    }
-    if (computerGames[i].time > computerGames[longestComputerGame].time)
-    {
-      longestComputerGame = i;
-    }
-    if (computerGames[i].time < computerGames[lowestComputerGame].time)
-    {
-      lowestComputerGame = i;
+      playerGames[players] = games[i];
+      if (players == 0 || games[i].time > playerGames[longestPlayerGame].time)
+      {
+        longestPlayerGame = players;
+      }
+      if (players == 0 || games[i].time < playerGames[shortestPlayerGame].time)
+      {
+        shortestPlayerGame = players;
+      }
+      players++;
     }
   }
 
   computerGames = realloc(computerGames, computers * sizeof(Game));
   playerGames = realloc(playerGames, players * sizeof(Game));
 
+  int scrollOffset = 0;
+  int maxScroll = computers > players ? computers * 3 * al_get_font_line_height(*font) : players * 4 * al_get_font_line_height(*font);
+
   while (historyRunning)
   {
     al_clear_to_color(al_map_rgb(255, 255, 255));
     drawText(texts, sizeof(texts) / sizeof(texts[0]));
 
-    drawGames(computerGames, computers, font, true, longestComputerGame);
-    drawGames(playerGames, players, font, false, longestPlayerGame);
+    drawGames(computerGames, computers, font, true, longestComputerGame, shortestComputerGame, scrollOffset);
+    drawGames(playerGames, players, font, false, longestPlayerGame, shortestPlayerGame, scrollOffset);
+
+    handleHistoryEvents(texts, display, font, &historyRunning, currentState, &scrollOffset, maxScroll);
 
     al_flip_display();
   }
