@@ -798,37 +798,49 @@ void canEatCoordinates(struct tile board[5][5], int x, int y, int *turn, bool *l
   if (x + 1 < 5)
   {
     Coordinates eatenCoords[4];
-    int count = checkEatCoordinates(board, x + 1, y, *turn % 2 == 0 ? 1 : 2, *turn % 2 == 0 ? 2 : 1, eatenCoords);
-    if (count > 0)
+    if (board[x + 1][y].piece == 0)
     {
-      *right = true;
+      int count = checkEatCoordinates(board, x + 1, y, *turn % 2 == 0 ? 1 : 2, *turn % 2 == 0 ? 2 : 1, eatenCoords);
+      if (count > 0)
+      {
+        *right = true;
+      }
     }
   }
   if (x - 1 >= 0)
   {
     Coordinates eatenCoords[4];
-    int count = checkEatCoordinates(board, x - 1, y, *turn % 2 == 0 ? 1 : 2, *turn % 2 == 0 ? 2 : 1, eatenCoords);
-    if (count > 0)
+    if (board[x - 1][y].piece == 0)
     {
-      *left = true;
+      int count = checkEatCoordinates(board, x - 1, y, *turn % 2 == 0 ? 1 : 2, *turn % 2 == 0 ? 2 : 1, eatenCoords);
+      if (count > 0)
+      {
+        *left = true;
+      }
     }
   }
   if (y + 1 < 5)
   {
     Coordinates eatenCoords[4];
-    int count = checkEatCoordinates(board, x, y + 1, *turn % 2 == 0 ? 1 : 2, *turn % 2 == 0 ? 2 : 1, eatenCoords);
-    if (count > 0)
+    if (board[x][y + 1].piece == 0)
     {
-      *down = true;
+      int count = checkEatCoordinates(board, x, y + 1, *turn % 2 == 0 ? 1 : 2, *turn % 2 == 0 ? 2 : 1, eatenCoords);
+      if (count > 0)
+      {
+        *down = true;
+      }
     }
   }
   if (y - 1 >= 0)
   {
     Coordinates eatenCoords[4];
-    int count = checkEatCoordinates(board, x, y - 1, *turn % 2 == 0 ? 1 : 2, *turn % 2 == 0 ? 2 : 1, eatenCoords);
-    if (count > 0)
+    if (board[x][y - 1].piece == 0)
     {
-      *up = true;
+      int count = checkEatCoordinates(board, x, y - 1, *turn % 2 == 0 ? 1 : 2, *turn % 2 == 0 ? 2 : 1, eatenCoords);
+      if (count > 0)
+      {
+        *up = true;
+      }
     }
   }
 }
@@ -842,8 +854,6 @@ bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mo
     {
       if (board[i][j].id == clickedTileId)
       {
-        printf("Clicked tile %d\n", clickedTileId);
-        printf("Selected: %d\n", selectedTile->id);
         if (board[i][j].id != 12 && board[i][j].piece == 0 && *turn < 12)
         {
           putPiece(board, i, j, turn);
@@ -1393,7 +1403,7 @@ void onMouseClickPauseMenuText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, s
     }
     else
     {
-      saveGameState(board, turn, "game_save_computer.txt", pieces, currentTime);
+      saveGameState(board, turn, "game_save.txt", pieces, currentTime);
     }
     *saved = true;
     break;
