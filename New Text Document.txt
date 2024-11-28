@@ -7,8 +7,5 @@ finalTrab.exe
 
 macOS
 
-gcc -o finalTrab finalTrab.c \
-    -I/opt/homebrew/include/allegro5 \
-    -L/opt/homebrew/lib \
-    -lallegro -lallegro_image -lallegro_font -lallegro_ttf -lallegro_primitives -lallegro_main
+gcc -o finalTrab finalTrab.c -lallegro -lallegro_image -lallegro_font -lallegro_ttf -lallegro_primitives -lallegro_main
   

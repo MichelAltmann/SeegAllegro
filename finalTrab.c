@@ -500,70 +500,70 @@ bool checkPossibilities(struct tile board[5][5], int turn)
   return possibilities > 0;
 }
 
-void checkEat(struct tile board[5][5], int x, int y, int turn)
+typedef struct
 {
-  if (turn % 2 != 0)
+  int x;
+  int y;
+} Coordinates;
+
+bool eatPieces(struct tile board[5][5], Coordinates eatenCoords[4], int count)
+{
+  for (int i = 0; i < count; i++)
   {
-    if (x + 2 < 5)
+    board[eatenCoords[i].x][eatenCoords[i].y].piece = 0;
+  }
+  if (count > 0)
+  {
+    return true;
+  }
+  return false;
+}
+
+int checkEatCoordinates(struct tile board[5][5], int x, int y, int playerPiece, int opponentPiece, Coordinates eatenCoords[4])
+{
+  int count = 0;
+
+  if (x + 2 < 5)
+  {
+    if (board[x + 1][y].piece == opponentPiece && board[x + 1][y].id != 12 && board[x + 2][y].piece == playerPiece)
     {
-      if (board[x + 1][y].piece == 1 && board[x + 1][y].id != 12 && board[x + 2][y].piece == 2)
-      {
-        board[x + 1][y].piece = 0;
-      }
-    }
-    if (x - 2 >= 0)
-    {
-      if (board[x - 1][y].piece == 1 && board[x - 1][y].id != 12 && board[x - 2][y].piece == 2)
-      {
-        board[x - 1][y].piece = 0;
-      }
-    }
-    if (y + 2 < 5)
-    {
-      if (board[x][y + 1].piece == 1 && board[x][y + 1].id != 12 && board[x][y + 2].piece == 2)
-      {
-        board[x][y + 1].piece = 0;
-      }
-    }
-    if (y - 2 >= 0)
-    {
-      if (board[x][y - 1].piece == 1 && board[x][y - 1].id != 12 && board[x][y - 2].piece == 2)
-      {
-        board[x][y - 1].piece = 0;
-      }
+      eatenCoords[count].x = x + 1;
+      eatenCoords[count].y = y;
+      count++;
     }
   }
-  else
+
+  if (x - 2 >= 0)
   {
-    if (x + 2 < 5)
+    if (board[x - 1][y].piece == opponentPiece && board[x - 1][y].id != 12 && board[x - 2][y].piece == playerPiece)
     {
-      if (board[x + 1][y].piece == 2 && board[x + 1][y].id != 12 && board[x + 2][y].piece == 1)
-      {
-        board[x + 1][y].piece = 0;
-      }
-    }
-    if (x - 2 >= 0)
-    {
-      if (board[x - 1][y].piece == 2 && board[x - 1][y].id != 12 && board[x - 2][y].piece == 1)
-      {
-        board[x - 1][y].piece = 0;
-      }
-    }
-    if (y + 2 < 5)
-    {
-      if (board[x][y + 1].piece == 2 && board[x][y + 1].id != 12 && board[x][y + 2].piece == 1)
-      {
-        board[x][y + 1].piece = 0;
-      }
-    }
-    if (y - 2 >= 0)
-    {
-      if (board[x][y - 1].piece == 2 && board[x][y - 1].id != 12 && board[x][y - 2].piece == 1)
-      {
-        board[x][y - 1].piece = 0;
-      }
+      eatenCoords[count].x = x - 1;
+      eatenCoords[count].y = y;
+      count++;
     }
   }
+
+  if (y + 2 < 5)
+  {
+    if (board[x][y + 1].piece == opponentPiece && board[x][y + 1].id != 12 && board[x][y + 2].piece == playerPiece)
+    {
+      eatenCoords[count].x = x;
+      eatenCoords[count].y = y + 1;
+      count++;
+    }
+  }
+
+  if (y - 2 >= 0)
+  {
+    if (board[x][y - 1].piece == opponentPiece && board[x][y - 1].id != 12 && board[x][y - 2].piece == playerPiece)
+    {
+      eatenCoords[count].x = x;
+      eatenCoords[count].y = y - 1;
+      count++;
+    }
+  }
+
+  return count;
 }
 
 void checkSmallWinPieces(int upPiece1, int upPiece2, int downPiece1, int downPiece2, bool *running, int turn, bool isXwin, int *winner, int *winType)
@@ -781,15 +781,59 @@ void checkDraw(struct tile board[5][5], int turn, bool *running, int *winner, in
   }
 }
 
-void movePiece(struct tile board[5][5], int x, int y, struct tile *selectedTile)
+void movePiece(struct tile board[5][5], int x, int y, struct tile *selectedTile, bool *isConsecutiveTurn)
 {
   board[x][y].piece = selectedTile->piece;
-  selectedTile->id = -1;
+
+  if (!*isConsecutiveTurn)
+  {
+    selectedTile->id = -1;
+  }
   board[selectedTile->x][selectedTile->y].piece = 0;
   clearPositionable(board);
 }
 
-bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mouse_x, int mouse_y, bool *running, int *turn, struct tile *selectedTile, bool hasPossibilities, int *winner, int *winType)
+void canEatCoordinates(struct tile board[5][5], int x, int y, int *turn, bool *left, bool *right, bool *up, bool *down)
+{
+  if (x + 1 < 5)
+  {
+    Coordinates eatenCoords[4];
+    int count = checkEatCoordinates(board, x + 1, y, *turn % 2 == 0 ? 1 : 2, *turn % 2 == 0 ? 2 : 1, eatenCoords);
+    if (count > 0)
+    {
+      *right = true;
+    }
+  }
+  if (x - 1 >= 0)
+  {
+    Coordinates eatenCoords[4];
+    int count = checkEatCoordinates(board, x - 1, y, *turn % 2 == 0 ? 1 : 2, *turn % 2 == 0 ? 2 : 1, eatenCoords);
+    if (count > 0)
+    {
+      *left = true;
+    }
+  }
+  if (y + 1 < 5)
+  {
+    Coordinates eatenCoords[4];
+    int count = checkEatCoordinates(board, x, y + 1, *turn % 2 == 0 ? 1 : 2, *turn % 2 == 0 ? 2 : 1, eatenCoords);
+    if (count > 0)
+    {
+      *down = true;
+    }
+  }
+  if (y - 1 >= 0)
+  {
+    Coordinates eatenCoords[4];
+    int count = checkEatCoordinates(board, x, y - 1, *turn % 2 == 0 ? 1 : 2, *turn % 2 == 0 ? 2 : 1, eatenCoords);
+    if (count > 0)
+    {
+      *up = true;
+    }
+  }
+}
+
+bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mouse_x, int mouse_y, bool *running, int *turn, struct tile *selectedTile, bool hasPossibilities, int *winner, int *winType, bool *isConsecutiveTurn)
 {
   int clickedTileId = mouseClickTile(board, mouse_x, mouse_y);
   for (size_t i = 0; i < 5; i++)
@@ -798,25 +842,51 @@ bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mo
     {
       if (board[i][j].id == clickedTileId)
       {
+        printf("Clicked tile %d\n", clickedTileId);
+        printf("Selected: %d\n", selectedTile->id);
         if (board[i][j].id != 12 && board[i][j].piece == 0 && *turn < 12)
         {
           putPiece(board, i, j, turn);
           return true;
         }
-        else if (board[i][j].piece == 1 && *turn >= 12 && *turn % 2 == 0)
+        else if (board[i][j].piece == 1 && *turn >= 12 && *turn % 2 == 0 && !*isConsecutiveTurn)
         {
           setTilePossibility(board, i, j, hasPossibilities);
           *selectedTile = board[i][j];
         }
-        else if (board[i][j].piece == 2 && *turn >= 12 && *turn % 2 != 0)
+        else if (board[i][j].piece == 2 && *turn >= 12 && *turn % 2 != 0 && !*isConsecutiveTurn)
         {
           setTilePossibility(board, i, j, hasPossibilities);
           *selectedTile = board[i][j];
         }
         else if (board[i][j].positionable && selectedTile->id != -1)
         {
-          movePiece(board, i, j, selectedTile);
-          checkEat(board, i, j, *turn);
+          printf("Moving piece\n");
+          movePiece(board, i, j, selectedTile, isConsecutiveTurn);
+          Coordinates eatenCoords[4];
+          int count = checkEatCoordinates(board, i, j, *turn % 2 == 0 ? 1 : 2, *turn % 2 == 0 ? 2 : 1, eatenCoords);
+          if (eatPieces(board, eatenCoords, count))
+          {
+            bool left = false;
+            bool right = false;
+            bool up = false;
+            bool down = false;
+            canEatCoordinates(board, i, j, turn, &left, &right, &up, &down);
+            if (left || right || up || down)
+            {
+              board[i + 1][j].positionable = right;
+              board[i - 1][j].positionable = left;
+              board[i][j + 1].positionable = down;
+              board[i][j - 1].positionable = up;
+              *selectedTile = board[i][j];
+              *isConsecutiveTurn = true;
+              return false;
+            }
+            else
+            {
+              *isConsecutiveTurn = false;
+            }
+          }
           checkDraw(board, *turn, running, winner, winType);
           checkWin(board, *turn, running, winner, winType);
           checkSmallWin(board, i, j, running, *turn, winner, winType);
@@ -853,6 +923,89 @@ int mouseClickText(struct text texts[], int mouse_x, int mouse_y, int size)
     }
   }
   return -1;
+}
+
+void onMouseClickMenuText(struct text texts[], int mouse_x, int mouse_y, bool *running, bool *menuRunning, GameState *currentState)
+{
+  switch (mouseClickText(texts, mouse_x, mouse_y, 7))
+  {
+  case 0:
+    *menuRunning = false;
+    *currentState = GAME;
+    break;
+  case 1:
+    *menuRunning = false;
+    *currentState = GAME_COMPUTER;
+    break;
+  case 2:
+    *menuRunning = false;
+    *currentState = LOAD_GAME;
+    break;
+  case 3:
+    *menuRunning = false;
+    *currentState = LOAD_GAME_COMPUTER;
+    break;
+  case 4:
+    *menuRunning = 0;
+    *currentState = HISTORY;
+    break;
+  case 5:
+    *menuRunning = false;
+    *currentState = HELP;
+    break;
+  case 6:
+    *menuRunning = false;
+    *running = false;
+    break;
+  default:
+    break;
+  }
+}
+
+int handleMenuEvents(struct text texts[], bool *running, bool *menuRunning, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont, GameState *currentState)
+{
+  bool hoveringText = false;
+  ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
+  ALLEGRO_EVENT ev;
+  al_wait_for_event(event_queue, &ev);
+
+  if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
+  {
+    al_destroy_display(*display);
+  }
+  else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
+  {
+    int mouse_x = ev.mouse.x;
+    int mouse_y = ev.mouse.y;
+    hoveringText = isHoveringText(texts, mouse_x, mouse_y, 7);
+
+    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
+    {
+      onMouseClickMenuText(texts, mouse_x, mouse_y, running, menuRunning, currentState);
+      return 0;
+    }
+    al_destroy_event_queue(event_queue);
+  }
+  return -1;
+}
+
+void menu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont, GameState *currentState, bool *running)
+{
+  struct text texts[7] = {0};
+
+  bool menuRunning = true;
+  initializeMenuTexts(texts, *font);
+
+  while (menuRunning)
+  {
+    al_clear_to_color(al_map_rgb(255, 255, 255));
+
+    drawText(texts, sizeof(texts) / sizeof(texts[0]));
+
+    al_flip_display();
+
+    handleMenuEvents(texts, running, &menuRunning, display, font, smallFont, currentState);
+  }
 }
 
 void onMouseClickHelpText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], int mouse_x, int mouse_y, bool *running, bool *helpRunning, int *page, GameState *currentState)
@@ -1305,7 +1458,7 @@ void pauseMenu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts
   handlePauseMenuEvents(texts, display, font, currentState, isPaused, gameRunning, board, turn, pieces, currentTime, saved, isComputer);
 }
 
-int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, struct tile board[5][5], ALLEGRO_FONT **font, int *round, struct tile *selectedTile, bool hasPossibilities, GameState *currentState, bool *isPaused, double *currentTime, time_t startTime, int *winner, int *winType)
+int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, struct tile board[5][5], ALLEGRO_FONT **font, int *round, struct tile *selectedTile, bool hasPossibilities, GameState *currentState, bool *isPaused, double *currentTime, time_t startTime, int *winner, int *winType, bool *isConsecutiveTurn)
 {
   bool hoveringTile = false;
   bool hoveringText = false;
@@ -1333,7 +1486,7 @@ int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
     ;
     if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringTile)
     {
-      if (onMouseClickTile(display, board, mouse_x, mouse_y, running, round, selectedTile, hasPossibilities, winner, winType))
+      if (onMouseClickTile(display, board, mouse_x, mouse_y, running, round, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn))
       {
         return 1;
       }
@@ -1417,8 +1570,8 @@ void computerMove(struct tile board[5][5], int turn, bool hasPossibilities, bool
         {
           if (board[x][y].positionable)
           {
-            movePiece(board, x, y, selectedTile);
-            checkEat(board, x, y, turn);
+            // movePiece(board, x, y, selectedTile, );
+            // checkEat(board, x, y, turn);
             checkDraw(board, turn, running, winner, winType);
             checkWin(board, turn, running, winner, winType);
             checkSmallWin(board, x, y, running, turn, winner, winType);
@@ -1512,6 +1665,7 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, Ga
   struct text textsMenu[3] = {0};
   texts[0] = createText(0, SCREEN_WIDTH - al_get_text_width(*font, "Pause"), 20, "Pause", al_map_rgb(0, 0, 0), HOVER, *font);
   struct tile selectedTile = {0};
+  bool isConsecutiveTurn = false;
   bool hasPossibilities = false;
   bool isPaused = false;
   bool saved = false;
@@ -1565,7 +1719,7 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, Ga
           turn++;
         }
       }
-      else if (handleGameEvents(texts, running, display, board, font, &turn, &selectedTile, hasPossibilities, currentState, &isPaused, &currentTime, startTime, winner, &winType) == 1)
+      else if (handleGameEvents(texts, running, display, board, font, &turn, &selectedTile, hasPossibilities, currentState, &isPaused, &currentTime, startTime, winner, &winType, &isConsecutiveTurn) == 1)
       {
         pieces++;
         if (pieces % 2 == 0 && pieces != 0 && pieces < 24)
@@ -1619,11 +1773,11 @@ void drawGames(Game *games, int gameCount, ALLEGRO_FONT **font, bool isComputer,
 
   y += 2 * al_get_font_line_height(*font);
 
-  for (size_t i = 0; i < gameCount; i++)
+  for (int i = gameCount - 1; i >= 0; i--)
   {
     al_draw_filled_rectangle(x - 10, y - 10, x + 280, y + 200, isComputer ? al_map_rgb(255, 200, 255) : al_map_rgb(200, 255, 255));
 
-    al_draw_textf(*font, al_map_rgb(0, 0, 0), x, y, 0, "Game %zu", i + 1);
+    al_draw_textf(*font, al_map_rgb(0, 0, 0), x, y, 0, "Game %d", i + 1);
 
     y += al_get_font_line_height(*font);
 
@@ -1748,89 +1902,6 @@ void showHistory(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, GameState *curr
   }
   free(computerGames);
   free(playerGames);
-}
-
-void onMouseClickMenuText(struct text texts[], int mouse_x, int mouse_y, bool *running, bool *menuRunning, GameState *currentState)
-{
-  switch (mouseClickText(texts, mouse_x, mouse_y, 7))
-  {
-  case 0:
-    *menuRunning = false;
-    *currentState = GAME;
-    break;
-  case 1:
-    *menuRunning = false;
-    *currentState = GAME_COMPUTER;
-    break;
-  case 2:
-    *menuRunning = false;
-    *currentState = LOAD_GAME;
-    break;
-  case 3:
-    *menuRunning = false;
-    *currentState = LOAD_GAME_COMPUTER;
-    break;
-  case 4:
-    *menuRunning = 0;
-    *currentState = HISTORY;
-    break;
-  case 5:
-    *menuRunning = false;
-    *currentState = HELP;
-    break;
-  case 6:
-    *menuRunning = false;
-    *running = false;
-    break;
-  default:
-    break;
-  }
-}
-
-int handleMenuEvents(struct text texts[], bool *running, bool *menuRunning, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont, GameState *currentState)
-{
-  bool hoveringText = false;
-  ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
-  ALLEGRO_EVENT ev;
-  al_wait_for_event(event_queue, &ev);
-
-  if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
-  {
-    al_destroy_display(*display);
-  }
-  else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
-  {
-    int mouse_x = ev.mouse.x;
-    int mouse_y = ev.mouse.y;
-    hoveringText = isHoveringText(texts, mouse_x, mouse_y, 7);
-
-    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
-    {
-      onMouseClickMenuText(texts, mouse_x, mouse_y, running, menuRunning, currentState);
-      return 0;
-    }
-    al_destroy_event_queue(event_queue);
-  }
-  return -1;
-}
-
-void menu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont, GameState *currentState, bool *running)
-{
-  struct text texts[7] = {0};
-
-  bool menuRunning = true;
-  initializeMenuTexts(texts, *font);
-
-  while (menuRunning)
-  {
-    al_clear_to_color(al_map_rgb(255, 255, 255));
-
-    drawText(texts, sizeof(texts) / sizeof(texts[0]));
-
-    al_flip_display();
-
-    handleMenuEvents(texts, running, &menuRunning, display, font, smallFont, currentState);
-  }
 }
 
 int main()
