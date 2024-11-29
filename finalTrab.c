@@ -9,6 +9,8 @@
 #define SCREEN_WIDTH 1600
 #define SCREEN_HEIGHT 1200
 #define TILE_SIZE 75
+#define TEXT 36
+#define SMALL_TEXT 30
 #define CENTER_BOARD_X (SCREEN_WIDTH / 2) - (TILE_SIZE * 5 / 2)
 #define CENTER_BOARD_Y (SCREEN_HEIGHT / 2) - (TILE_SIZE * 5 / 2)
 #define TILE_END_X CENTER_BOARD_X + TILE_SIZE
@@ -232,19 +234,29 @@ struct text createText(int id, int x, int y, const char *text, ALLEGRO_COLOR col
   return t;
 }
 
+int getCenterY(ALLEGRO_FONT *font, const char *text, int y, int height)
+{
+  int text_y = SCREEN_HEIGHT / 2 - height / 2;
+  return text_y;
+}
+
 void initializeMenuTexts(struct text texts[7], ALLEGRO_FONT *font)
 {
-  texts[0] = createText(0, getCenter(font, "Player V.S Player"), 100, "Player V.S Player", al_map_rgb(0, 0, 0), HOVER, font);
-
-  texts[1] = createText(1, getCenter(font, "Player V.S Computer"), 150, "Player V.S Computer", al_map_rgb(0, 0, 0), HOVER, font);
-
-  texts[2] = createText(2, getCenter(font, "Continue vs Player"), 200, "Continue vs Player", al_map_rgb(0, 0, 0), HOVER, font);
-
-  texts[3] = createText(3, getCenter(font, "Continue vs Computer"), 250, "Continue vs Computer", al_map_rgb(0, 0, 0), HOVER, font);
-
-  texts[4] = createText(4, getCenter(font, "History"), 300, "History", al_map_rgb(0, 0, 0), HOVER, font);
-  texts[5] = createText(5, getCenter(font, "Help"), 350, "Help", al_map_rgb(0, 0, 0), HOVER, font);
-  texts[6] = createText(6, getCenter(font, "Quit"), 400, "Quit", al_map_rgb(0, 0, 0), HOVER, font);
+  int height = 19 * al_get_font_line_height(font);
+  int y = getCenterY(font, "Player V.S Player", 100, height);
+  texts[0] = createText(0, getCenter(font, "Player V.S Player"), y, "Player V.S Player", al_map_rgb(0, 0, 0), HOVER, font);
+  y += 2*al_get_font_line_height(font);
+  texts[1] = createText(1, getCenter(font, "Player V.S Computer"), y, "Player V.S Computer", al_map_rgb(0, 0, 0), HOVER, font);
+  y += 2*al_get_font_line_height(font);
+  texts[2] = createText(2, getCenter(font, "Continue vs Player"), y, "Continue vs Player", al_map_rgb(0, 0, 0), HOVER, font);
+  y += 2*al_get_font_line_height(font);
+  texts[3] = createText(3, getCenter(font, "Continue vs Computer"), y, "Continue vs Computer", al_map_rgb(0, 0, 0), HOVER, font);
+  y += 2*al_get_font_line_height(font);
+  texts[4] = createText(4, getCenter(font, "History"), y, "History", al_map_rgb(0, 0, 0), HOVER, font);
+  y += 2*al_get_font_line_height(font);
+  texts[5] = createText(5, getCenter(font, "Help"), y, "Help", al_map_rgb(0, 0, 0), HOVER, font);
+  y += 2*al_get_font_line_height(font);
+  texts[6] = createText(6, getCenter(font, "Quit"), y, "Quit", al_map_rgb(0, 0, 0), HOVER, font);
 }
 
 void drawText(struct text texts[], int length)
@@ -301,7 +313,7 @@ bool initializeAllegro(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_F
     return false;
   }
 
-  *font = al_load_ttf_font("MinecraftRegular-Bmg3.otf", 32, 0);
+  *font = al_load_ttf_font("MinecraftRegular-Bmg3.otf", TEXT, 0);
   if (!*font)
   {
     fprintf(stderr, "Failed to load font. Make sure 'MinecraftRegular-Bmg3.otf' is in the correct directory.\n");
@@ -309,7 +321,7 @@ bool initializeAllegro(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_F
     return false;
   }
 
-  *smallFont = al_load_ttf_font("MinecraftRegular-Bmg3.otf", 24, 0);
+  *smallFont = al_load_ttf_font("MinecraftRegular-Bmg3.otf", SMALL_TEXT, 0);
   if (!*smallFont)
   {
     fprintf(stderr, "Failed to load font. Make sure 'MinecraftRegular-Bmg3.otf' is in the correct directory.\n");
@@ -1083,8 +1095,10 @@ void page1(struct tile board[5][5], ALLEGRO_FONT **font)
   char text1[100] = "player 1 is red, and player 2 is blue.";
   board[1][2].piece = 1;
   board[3][2].piece = 2;
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 70, 0, text1);
+  float y = 30;
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), y, 0, text);
+  y += 1.2 * al_get_font_line_height(*font);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), y, 0, text1);
 }
 
 void page2(struct tile board[5][5], ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont)
@@ -1093,14 +1107,17 @@ void page2(struct tile board[5][5], ALLEGRO_FONT **font, ALLEGRO_FONT **smallFon
   char text[100] = "Placement phase:";
   char text1[100] = "Players take turns placing 2 of their pieces on the board each turn.";
   char text2[100] = "players CANNOT place their pieces in the middle during this phase.";
+  float y = 30;
   board[2][2].color = al_map_rgb(255, 0, 0);
   board[4][2].piece = 1;
   board[3][1].piece = 2;
   board[1][2].piece = 1;
   board[3][2].piece = 2;
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
-  al_draw_text(*smallFont, al_map_rgb(0, 0, 0), getCenter(*smallFont, text1), 65, 0, text1);
-  al_draw_text(*smallFont, al_map_rgb(0, 0, 0), getCenter(*smallFont, text2), 88, 0, text2);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), y, 0, text);
+  y += 1.2 * al_get_font_line_height(*font);
+  al_draw_text(*smallFont, al_map_rgb(0, 0, 0), getCenter(*smallFont, text1), y, 0, text1);
+  y += 1.2 * al_get_font_line_height(*smallFont);
+  al_draw_text(*smallFont, al_map_rgb(0, 0, 0), getCenter(*smallFont, text2), y, 0, text2);
 }
 
 void adjacentSpaces(struct tile board[5][5])
@@ -1120,8 +1137,10 @@ void page3(struct tile board[5][5], ALLEGRO_FONT **font)
   initializeTiles(board);
   char text[100] = "Movement phase:";
   char text1[100] = "Players take turns moving their pieces to adjacent empty spaces.";
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 70, 0, text1);
+  float y = 30;
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), y, 0, text);
+  y += 1.2 * al_get_font_line_height(*font);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), y, 0, text1);
   adjacentSpaces(board);
 }
 
@@ -1131,9 +1150,12 @@ void page4(struct tile board[5][5], ALLEGRO_FONT **font, ALLEGRO_FONT **smallFon
   char text[100] = "Objective:";
   char text1[100] = "The objective is to eat all the opponent's pieces.";
   char text2[100] = "You can eat an opponent's piece by surrounding it with your pieces in your turn.";
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 60, 0, text1);
-  al_draw_text(*smallFont, al_map_rgb(0, 0, 0), getCenter(*smallFont, text2), 90, 0, text2);
+  float y = 30;
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), y, 0, text);
+  y += 1.2 * al_get_font_line_height(*font);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), y, 0, text1);
+  y += 1.2 * al_get_font_line_height(*font);
+  al_draw_text(*smallFont, al_map_rgb(0, 0, 0), getCenter(*smallFont, text2), y, 0, text2);
   adjacentSpaces(board);
 }
 
@@ -1143,9 +1165,12 @@ void page5(struct tile board[5][5], ALLEGRO_FONT **font, ALLEGRO_FONT **smallFon
   char text[100] = "Objective:";
   char text1[100] = "The objective is to eat all the opponent's pieces.";
   char text2[100] = "You can eat an opponent's piece by surrounding it with your pieces in your turn.";
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 60, 0, text1);
-  al_draw_text(*smallFont, al_map_rgb(0, 0, 0), getCenter(*smallFont, text2), 90, 0, text2);
+  float y = 30;
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), y, 0, text);
+  y += 1.2 * al_get_font_line_height(*font);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), y, 0, text1);
+  y += 1.2 * al_get_font_line_height(*font);
+  al_draw_text(*smallFont, al_map_rgb(0, 0, 0), getCenter(*smallFont, text2), y, 0, text2);
   board[4][2].piece = 1;
   board[3][1].piece = 2;
   board[2][2].piece = 1;
@@ -1156,8 +1181,10 @@ void page6(struct tile board[5][5], ALLEGRO_FONT **font)
   initializeTiles(board);
   char text[100] = "You CANNOT eat an opponents piece";
   char text1[100] = "if it's in the center of the board.";
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 60, 0, text1);
+  float y = 30;
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), y, 0, text);
+  y += 1.2 * al_get_font_line_height(*font);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), y, 0, text1);
   board[2][2].piece = 2;
   board[2][2].color = al_map_rgb(255, 0, 0);
   board[3][2].piece = 1;
@@ -1188,8 +1215,10 @@ void page7(struct tile board[5][5], ALLEGRO_FONT **font)
   initializeTiles(board);
   char text[100] = "If stuck with no empty spaces to move.";
   char text1[100] = "You can eat an opponent's piece.";
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 60, 0, text1);
+  float y = 30;
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), y, 0, text);
+  y += 1.2 * al_get_font_line_height(*font);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), y, 0, text1);
   stuckPieces(board);
 }
 
@@ -1198,8 +1227,10 @@ void page8(struct tile board[5][5], ALLEGRO_FONT **font)
   initializeTiles(board);
   char text[100] = "If stuck with no empty spaces to move.";
   char text1[100] = "You can eat an opponent's piece.";
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 60, 0, text1);
+  float y = 30;
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), y, 0, text);
+  y += 1.2 * al_get_font_line_height(*font);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), y, 0, text1);
   stuckPieces(board);
   board[0][4].piece = 0;
   board[1][4].piece = 1;
@@ -1212,7 +1243,8 @@ void page9(struct tile board[5][5], ALLEGRO_FONT **font)
   initializeTiles(board);
   char text[100] = "You win by eating all the opponent's pieces.";
   char text1[100] = "Player 2 Wins!";
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
+  float y = 30;
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), y, 0, text);
   al_draw_text(*font, al_map_rgb(0, 0, 200), getCenter(*font, text1), SCREEN_HEIGHT - al_get_font_line_height(*font), 0, text1);
   board[3][2].piece = 2;
   board[1][4].piece = 2;
@@ -1226,8 +1258,10 @@ void page10(struct tile board[5][5], ALLEGRO_FONT **font)
   char text[100] = "If each player has 3 or less pieces.";
   char text1[100] = "The game draws!";
   char text2[100] = "Draw!";
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 30, 0, text);
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 60, 0, text1);
+  float y = 30;
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), y, 0, text);
+  y += 1.2 * al_get_font_line_height(*font);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), y, 0, text1);
   al_draw_text(*font, al_map_rgb(200, 0, 200), getCenter(*font, text2), SCREEN_HEIGHT - al_get_font_line_height(*font), 0, text2);
   board[3][2].piece = 2;
   board[1][4].piece = 2;
@@ -1243,8 +1277,10 @@ void page11(struct tile board[5][5], ALLEGRO_FONT **font)
   char text[100] = "You can have a small win by aligning all your pieces in a row or column";
   char text1[100] = "separating the board in two, with all the opponents pieces on one side.";
   char text2[100] = "Player 1 Small win!";
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), 55, 0, text);
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), 85, 0, text1);
+  float y = 30;
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text), y, 0, text);
+  y += 1.2 * al_get_font_line_height(*font);
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, text1), y, 0, text1);
   al_draw_text(*font, al_map_rgb(200, 0, 0), getCenter(*font, text2), SCREEN_HEIGHT - al_get_font_line_height(*font), 0, text2);
   board[0][0].piece = 1;
   board[0][1].piece = 1;
@@ -1445,10 +1481,13 @@ void initializePauseMenuTexts(struct text texts[], ALLEGRO_FONT *font)
   char resume[10] = "Resume";
   char saveGame[10] = "Save Game";
   char exit[10] = "Exit";
+  float y = 60;
 
-  texts[0] = createText(0, getCenter(font, resume), 60, resume, al_map_rgb(0, 0, 0), HOVER, font);
-  texts[1] = createText(1, getCenter(font, saveGame), 120, saveGame, al_map_rgb(0, 0, 0), HOVER, font);
-  texts[2] = createText(2, getCenter(font, exit), 180, exit, al_map_rgb(0, 0, 0), HOVER, font);
+  texts[0] = createText(0, getCenter(font, resume), y, resume, al_map_rgb(0, 0, 0), HOVER, font);
+  y += 1.2 * al_get_font_line_height(font);
+  texts[1] = createText(1, getCenter(font, saveGame), y, saveGame, al_map_rgb(0, 0, 0), HOVER, font);
+  y += 1.2 * al_get_font_line_height(font);
+  texts[2] = createText(2, getCenter(font, exit), y, exit, al_map_rgb(0, 0, 0), HOVER, font);
 }
 
 void pauseMenu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], GameState *currentState, bool *isPaused, bool *gameRunning, size_t textLength, struct tile board[5][5], int turn, int pieces, double currentTime, bool *saved, bool isComputer)
@@ -1706,22 +1745,24 @@ void drawGameOver(int *winner, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, G
   char text1[20] = "Play Again";
   char text2[20] = "Back to Menu";
   struct text texts[2] = {0};
-
-  texts[0] = createText(0, getCenter(*font, text1), 240, text1, al_map_rgb(0, 0, 0), HOVER, *font);
-  texts[1] = createText(1, getCenter(*font, text2), 300, text2, al_map_rgb(0, 0, 0), HOVER, *font);
+  int y = 200 + al_get_font_line_height(*font);
+  texts[0] = createText(0, getCenter(*font, text1), y, text1, al_map_rgb(0, 0, 0), HOVER, *font);
+  y += 2 * al_get_font_line_height(*font);
+  texts[1] = createText(1, getCenter(*font, text2), y, text2, al_map_rgb(0, 0, 0), HOVER, *font);
 
   sprintf(text, "Player %d Wins!", *winner);
+  y += 2 * al_get_font_line_height(*font);
   while (gameOverRunning)
   {
     al_clear_to_color(al_map_rgb(255, 255, 255));
     al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, "GAME OVER"), 120, 0, "GAME OVER");
     if (*winner != 3)
     {
-      al_draw_textf(*font, *winner == 2 ? al_map_rgb(0, 0, 200) : al_map_rgb(200, 0, 0), getCenter(*font, text), 180, 0, "%s", text);
+      al_draw_textf(*font, *winner == 2 ? al_map_rgb(0, 0, 200) : al_map_rgb(200, 0, 0), getCenter(*font, text), y, 0, "%s", text);
     }
     else
     {
-      al_draw_text(*font, al_map_rgb(150, 0, 150), getCenter(*font, "Draw!"), 180, 0, "Draw!");
+      al_draw_text(*font, al_map_rgb(150, 0, 150), getCenter(*font, "Draw!"), y, 0, "Draw!");
     }
 
     drawText(texts, sizeof(texts) / sizeof(texts[0]));
@@ -1773,9 +1814,11 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, Ga
       al_clear_to_color(al_map_rgb(255, 255, 255));
       drawText(texts, sizeof(texts) / sizeof(texts[0]));
       drawBoard(board);
-      al_draw_textf(*font, al_map_rgb(0, 0, 0), 10, 40, 0, "Time: %.0f", currentTime);
-      al_draw_text(*font, al_map_rgb(0, 0, 0), 10, 10, 0, "Turn: ");
-      al_draw_textf(*font, turn % 2 == 0 ? al_map_rgb(200, 0, 0) : al_map_rgb(0, 0, 200), 100, 10, 0, "%s", turn % 2 == 0 ? "Player 1" : "Player 2");
+      int y = 10;
+      al_draw_text(*font, al_map_rgb(0, 0, 0), 10, y, 0, "Turn: ");
+      al_draw_textf(*font, turn % 2 == 0 ? al_map_rgb(200, 0, 0) : al_map_rgb(0, 0, 200), al_get_text_width(*font, "Turn: "), y, 0, "%s", turn % 2 == 0 ? "Player 1" : "Player 2");
+      y += al_get_font_line_height(*font);
+      al_draw_textf(*font, al_map_rgb(0, 0, 0), 10, y, 0, "Time: %.0f", currentTime);
 
       al_flip_display();
 
@@ -1824,7 +1867,7 @@ void drawGames(Game *games, int gameCount, ALLEGRO_FONT **font, bool isComputer,
   char shortest[100];
   sprintf(shortest, "Game %d: %.f Seconds", shortestGame + 1, games[shortestGame].time);
 
-  int x = isComputer ? SCREEN_WIDTH / 2 - 350 : SCREEN_WIDTH / 2 + 50;
+  int x = isComputer ? SCREEN_WIDTH / 2 - (al_get_text_width(*font, "Player vs Computer") * 1.3) : SCREEN_WIDTH / 2 + (al_get_text_width(*font, "Player vs Player") * 0.3);
   int y = 80 - scrollOffset;
 
   al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, "Games History"), y - 60, 0, "Games History");
@@ -1851,7 +1894,7 @@ void drawGames(Game *games, int gameCount, ALLEGRO_FONT **font, bool isComputer,
 
   for (int i = gameCount - 1; i >= 0; i--)
   {
-    al_draw_filled_rectangle(x - 10, y - 10, x + 280, y + 200, isComputer ? al_map_rgb(255, 200, 255) : al_map_rgb(200, 255, 255));
+    al_draw_filled_rectangle(x - 10, y - 10, x + (al_get_text_width(*font, "Time: 100 Seconds")), y + (al_get_font_line_height(*font) * 5), isComputer ? al_map_rgb(255, 200, 255) : al_map_rgb(200, 255, 255));
 
     al_draw_textf(*font, al_map_rgb(0, 0, 0), x, y, 0, "Game %d", i + 1);
 
