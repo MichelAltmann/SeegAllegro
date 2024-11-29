@@ -1509,17 +1509,6 @@ int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
   return -1;
 }
 
-// void getPlayablePiece(struct tile board[5][5], bool hasPossibilities, int turn, bool *running, int *winner)
-// {
-//   if (hasPossibilities)
-//   {
-//     bool tileUp = false;
-//     bool tileDown = false;
-//     bool tileLeft = false;
-//     bool tileRight = false;
-//     int i = 0, j = 0;
-//     struct tile selectedTile = board[i][j];
-
 void checkTilePositionables(struct tile board[5][5], int x, int y, bool *up, bool *down, bool *left, bool *right, bool hasPossibilities)
 {
   if (x - 1 >= 0)
@@ -1626,7 +1615,6 @@ void computerTurn(struct tile board[5][5], bool *running, int *turn, struct tile
           }
         }
       }
-
       while (!pieceFound)
       {
         do
@@ -1634,7 +1622,6 @@ void computerTurn(struct tile board[5][5], bool *running, int *turn, struct tile
           x = rand() % 5;
           y = rand() % 5;
         } while (board[x][y].piece != 2);
-
         checkTilePossibilities(board, x, y, &up, &down, &left, &right);
         if (left || right || up || down)
         {
@@ -1665,6 +1652,7 @@ void computerTurn(struct tile board[5][5], bool *running, int *turn, struct tile
     {
       checkTilePositionables(board, selectedTile->x, selectedTile->y, &up, &down, &left, &right, hasPossibilities);
       computerMove(board, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn, right, left, up, down);
+      *isConsecutiveTurn = false;
     }
     computerMove(board, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn, right, left, up, down);
   }
@@ -1801,9 +1789,10 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, Ga
         {
           turn++;
         }
-        else if (pieces >= 24)
+        else if (pieces >= 24 && !isConsecutiveTurn)
         {
           turn++;
+          clearPositionable(board);
         }
       }
       else if (handleGameEvents(texts, running, display, board, font, &turn, &selectedTile, hasPossibilities, currentState, &isPaused, &currentTime, startTime, winner, &winType, &isConsecutiveTurn) == 1)
