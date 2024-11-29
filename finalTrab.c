@@ -845,7 +845,7 @@ void canEatCoordinates(struct tile board[5][5], int x, int y, int *turn, bool *l
   }
 }
 
-bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mouse_x, int mouse_y, bool *running, int *turn, struct tile *selectedTile, bool hasPossibilities, int *winner, int *winType, bool *isConsecutiveTurn)
+bool onMouseClickTile(struct tile board[5][5], int mouse_x, int mouse_y, bool *running, int *turn, struct tile *selectedTile, bool hasPossibilities, int *winner, int *winType, bool *isConsecutiveTurn)
 {
   int clickedTileId = mouseClickTile(board, mouse_x, mouse_y);
   for (size_t i = 0; i < 5; i++)
@@ -871,7 +871,6 @@ bool onMouseClickTile(ALLEGRO_DISPLAY **display, struct tile board[5][5], int mo
         }
         else if (board[i][j].positionable && selectedTile->id != -1)
         {
-          printf("Moving piece\n");
           movePiece(board, i, j, selectedTile, isConsecutiveTurn);
           Coordinates eatenCoords[4];
           int count = checkEatCoordinates(board, i, j, *turn % 2 == 0 ? 1 : 2, *turn % 2 == 0 ? 2 : 1, eatenCoords);
@@ -1496,7 +1495,7 @@ int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
     ;
     if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringTile)
     {
-      if (onMouseClickTile(display, board, mouse_x, mouse_y, running, round, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn))
+      if (onMouseClickTile(board, mouse_x, mouse_y, running, round, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn))
       {
         return 1;
       }
@@ -1521,75 +1520,153 @@ int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **displ
 //     int i = 0, j = 0;
 //     struct tile selectedTile = board[i][j];
 
-void computerMove(struct tile board[5][5], int turn, bool hasPossibilities, bool *running, struct tile *selectedTile, int *winner, int *winType)
+void checkTilePositionables(struct tile board[5][5], int x, int y, bool *up, bool *down, bool *left, bool *right, bool hasPossibilities)
+{
+  if (x - 1 >= 0)
+  {
+    if (hasPossibilities)
+    {
+      *left = board[x - 1][y].positionable;
+    }
+    else if (board[x - 1][y].piece == 1)
+    {
+      *left = true;
+    }
+  }
+  if (x + 1 < 5)
+  {
+    if (hasPossibilities)
+    {
+      *right = board[x + 1][y].positionable;
+    }
+    else if (board[x + 1][y].piece == 1)
+    {
+      *right = true;
+    }
+  }
+  if (y - 1 >= 0)
+  {
+    if (hasPossibilities)
+    {
+      *up = board[x][y - 1].positionable;
+    }
+    else if (board[x][y - 1].piece == 1)
+    {
+      *up = true;
+    }
+  }
+  if (y + 1 < 5)
+  {
+    if (hasPossibilities)
+    {
+      *down = board[x][y + 1].positionable;
+    }
+    else if (board[x][y + 1].piece == 1)
+    {
+      *down = true;
+    }
+  }
+}
+
+void computerMove(struct tile board[5][5], bool *running, int *turn, struct tile *selectedTile, bool hasPossibilities, int *winner, int *winType, bool *isConsecutiveTurn, bool right, bool left, bool up, bool down)
+{
+  if (right)
+  {
+    onMouseClickTile(board, selectedTile->x2 + 5, selectedTile->y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
+  }
+  if (left)
+  {
+    onMouseClickTile(board, selectedTile->x1 - 5, selectedTile->y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
+  }
+  if (down)
+  {
+    onMouseClickTile(board, selectedTile->x1 + 5, selectedTile->y2 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
+  }
+  if (up)
+  {
+    onMouseClickTile(board, selectedTile->x1 + 5, selectedTile->y1 - 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
+  }
+}
+
+void computerTurn(struct tile board[5][5], bool *running, int *turn, struct tile *selectedTile, bool hasPossibilities, int *winner, int *winType, bool *isConsecutiveTurn)
 {
   int x, y;
-  if (turn < 12)
+  bool up = false;
+  bool down = false;
+  bool left = false;
+  bool right = false;
+  if (*turn < 12)
   {
     do
     {
       x = rand() % 5;
       y = rand() % 5;
     } while (board[x][y].piece != 0 || board[x][y].id == 12);
-    putPiece(board, x, y, &turn);
+    onMouseClickTile(board, board[x][y].x1 + 5, board[x][y].y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
   }
   else
   {
-    bool up = false;
-    bool down = false;
-    bool left = false;
-    bool right = false;
+    printf("%d", hasPossibilities);
+    sleep(1);
     bool pieceFound = false;
-    for (x = 0; x < 5 && !pieceFound; x++)
+    if (selectedTile->id == -1 && hasPossibilities)
     {
-      for (y = 0; y < 5 && !pieceFound; y++)
+      for (x = 0; x < 5 && !pieceFound; x++)
       {
-        if (board[x][y].piece == 2)
+        for (y = 0; y < 5 && !pieceFound; y++)
         {
-          setTilePossibility(board, x, y, hasPossibilities);
-          checkTilePossibilities(board, x, y, &up, &down, &left, &right);
-          if (up)
+          if (board[x][y].piece == 2)
           {
-            *selectedTile = board[x][y];
-            pieceFound = true;
-          }
-          else if (down)
-          {
-            *selectedTile = board[x][y];
-            pieceFound = true;
-          }
-          else if (left)
-          {
-            *selectedTile = board[x][y];
-            pieceFound = true;
-          }
-          else if (right)
-          {
-            *selectedTile = board[x][y];
-            pieceFound = true;
+            canEatCoordinates(board, x, y, turn, &left, &right, &up, &down);
+            if (left || right || up || down)
+            {
+              pieceFound = true;
+              onMouseClickTile(board, board[x][y].x1 + 5, board[x][y].y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
+            }
           }
         }
       }
-    }
 
-    if (pieceFound)
-    {
-      for (x = 0; x < 5; x++)
+      while (!pieceFound)
       {
-        for (y = 0; y < 5; y++)
+        do
         {
-          if (board[x][y].positionable)
-          {
-            // movePiece(board, x, y, selectedTile, );
-            // checkEat(board, x, y, turn);
-            checkDraw(board, turn, running, winner, winType);
-            checkWin(board, turn, running, winner, winType);
-            checkSmallWin(board, x, y, running, turn, winner, winType);
-            return;
-          }
+          x = rand() % 5;
+          y = rand() % 5;
+        } while (board[x][y].piece != 2);
+
+        checkTilePossibilities(board, x, y, &up, &down, &left, &right);
+        if (left || right || up || down)
+        {
+          pieceFound = true;
+          onMouseClickTile(board, board[x][y].x1 + 5, board[x][y].y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
         }
       }
     }
+    else
+    {
+      while (!pieceFound)
+      {
+        do
+        {
+          x = rand() % 5;
+          y = rand() % 5;
+        } while (board[x][y].piece != 2);
+
+        onMouseClickTile(board, board[x][y].x1 + 5, board[x][y].y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
+        checkTilePositionables(board, selectedTile->x, selectedTile->y, &up, &down, &left, &right, hasPossibilities);
+        if (left || right || up || down)
+        {
+          pieceFound = true;
+        }
+      }
+    }
+    if (*isConsecutiveTurn)
+    {
+      checkTilePositionables(board, selectedTile->x, selectedTile->y, &up, &down, &left, &right, hasPossibilities);
+      computerMove(board, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn, right, left, up, down);
+    }
+    computerMove(board, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn, right, left, up, down);
   }
 }
 
@@ -1718,7 +1795,7 @@ void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, Ga
 
       if (isComputer && turn % 2 != 0)
       {
-        computerMove(board, turn, hasPossibilities, running, &selectedTile, winner, &winType);
+        computerTurn(board, &gameRunning, &turn, &selectedTile, hasPossibilities, winner, &winType, &isConsecutiveTurn);
         pieces++;
         if (pieces % 2 == 0 && pieces != 0 && pieces < 24)
         {
