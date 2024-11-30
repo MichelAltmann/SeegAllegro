@@ -11,6 +11,7 @@
 #define TILE_SIZE 75
 #define TEXT 36
 #define SMALL_TEXT 30
+#define TITLE_TEXT 60
 #define CENTER_BOARD_X (SCREEN_WIDTH / 2) - (TILE_SIZE * 5 / 2)
 #define CENTER_BOARD_Y (SCREEN_HEIGHT / 2) - (TILE_SIZE * 5 / 2)
 #define TILE_END_X CENTER_BOARD_X + TILE_SIZE
@@ -18,7 +19,8 @@
 #define TILE1_COLOR al_map_rgb(0, 0, 0)
 #define TILE2_COLOR al_map_rgb(100, 100, 100)
 #define TILE3_COLOR al_map_rgb(255, 122, 255)
-#define HOVER al_map_rgb(255, 0, 0)
+#define HOVER al_map_rgb(255, 0, 50)
+#define HOVER2 al_map_rgb(50, 0, 255)
 
 typedef enum
 {
@@ -41,11 +43,25 @@ struct tile
   int x2;
   int y2;
   ALLEGRO_COLOR color;
-  ALLEGRO_COLOR colorHover;
   bool hover;
   bool click;
   bool positionable;
   int piece;
+};
+
+struct text
+{
+  int id;
+  int x;
+  int y;
+  int width;
+  int height;
+  char text[100];
+  ALLEGRO_COLOR color;
+  ALLEGRO_COLOR colorHover;
+  ALLEGRO_FONT *font;
+  bool hover;
+  bool click;
 };
 
 typedef struct
@@ -56,6 +72,12 @@ typedef struct
   int result;
   bool isComputer;
 } Game;
+
+typedef struct
+{
+  int x;
+  int y;
+} Coordinates;
 
 Game *readGameHistory(const char *filename, int *gameCount)
 {
@@ -100,178 +122,6 @@ Game *readGameHistory(const char *filename, int *gameCount)
 
   fclose(file);
   return games;
-}
-
-struct tile createTile(int id, int x, int y, int x1, int y1, int x2, int y2, ALLEGRO_COLOR color, ALLEGRO_COLOR colorHover)
-{
-  struct tile t;
-  t.id = id;
-  t.x = x;
-  t.y = y;
-  t.x1 = x1;
-  t.y1 = y1;
-  t.x2 = x2;
-  t.y2 = y2;
-  t.color = color;
-  t.colorHover = colorHover;
-  t.hover = false;
-  t.click = false;
-  t.positionable = false;
-  t.piece = 0;
-  return t;
-}
-
-ALLEGRO_EVENT_QUEUE *setupEventQueue(ALLEGRO_DISPLAY **display)
-{
-  ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
-  al_register_event_source(event_queue, al_get_display_event_source(*display));
-  al_register_event_source(event_queue, al_get_mouse_event_source());
-  return event_queue;
-}
-
-void drawTile(struct tile tile)
-{
-  if (tile.hover)
-  {
-    al_draw_filled_rectangle(tile.x1, tile.y1, tile.x2, tile.y2, tile.colorHover);
-  }
-  else if (tile.positionable)
-  {
-    al_draw_filled_rectangle(tile.x1, tile.y1, tile.x2, tile.y2, al_map_rgba(0, 255, 0, 100));
-  }
-  else
-  {
-    al_draw_filled_rectangle(tile.x1, tile.y1, tile.x2, tile.y2, tile.color);
-  }
-}
-
-void drawBoard(struct tile tile[5][5])
-{
-  for (size_t x = 0; x <= 6; x++)
-  {
-    for (size_t y = 0; y <= 6; y++)
-    {
-      if (x == 0 || y == 0 || x == 6 || y == 6)
-      {
-        al_draw_filled_rectangle((CENTER_BOARD_X - TILE_SIZE) + x * TILE_SIZE, (CENTER_BOARD_Y - TILE_SIZE) + y * TILE_SIZE, (TILE_END_X - TILE_SIZE) + x * TILE_SIZE, (TILE_END_Y - TILE_SIZE) + y * TILE_SIZE, al_map_rgb(150, 100, 50));
-      }
-      else if (x > 0 && y > 0 && x < 6 && y < 6)
-      {
-        drawTile(tile[x - 1][y - 1]);
-        if (tile[x - 1][y - 1].piece == 1)
-        {
-          al_draw_filled_circle((CENTER_BOARD_X - (TILE_SIZE / 2)) + x * TILE_SIZE, (CENTER_BOARD_Y - (TILE_SIZE / 2)) + y * TILE_SIZE, TILE_SIZE / 3, al_map_rgb(200, 0, 0));
-        }
-        else if (tile[x - 1][y - 1].piece == 2)
-        {
-          al_draw_filled_circle((CENTER_BOARD_X - (TILE_SIZE / 2)) + x * TILE_SIZE, (CENTER_BOARD_Y - (TILE_SIZE / 2)) + y * TILE_SIZE, TILE_SIZE / 3, al_map_rgb(0, 0, 200));
-        }
-      }
-    }
-  }
-}
-
-void initializeTiles(struct tile tile[5][5])
-{
-  int id = 0;
-  for (size_t x = 0; x < 5; x++)
-  {
-    for (size_t y = 0; y < 5; y++)
-    {
-      if (x == 2 && y == 2)
-      {
-        tile[x][y] = createTile(id, x, y, CENTER_BOARD_X + x * TILE_SIZE, CENTER_BOARD_Y + y * TILE_SIZE, TILE_END_X + x * TILE_SIZE, TILE_END_Y + y * TILE_SIZE, TILE3_COLOR, HOVER);
-      }
-      else if ((x % 2 == 0 && y % 2 == 0) || (x % 2 != 0 && y % 2 != 0))
-      {
-        tile[x][y] = createTile(id, x, y, CENTER_BOARD_X + x * TILE_SIZE, CENTER_BOARD_Y + y * TILE_SIZE, TILE_END_X + x * TILE_SIZE, TILE_END_Y + y * TILE_SIZE, TILE1_COLOR, HOVER);
-      }
-      else
-      {
-        tile[x][y] = createTile(id, x, y, CENTER_BOARD_X + x * TILE_SIZE, CENTER_BOARD_Y + y * TILE_SIZE, TILE_END_X + x * TILE_SIZE, TILE_END_Y + y * TILE_SIZE, TILE2_COLOR, HOVER);
-      }
-      id++;
-    }
-  }
-}
-
-struct text
-{
-  int id;
-  int x;
-  int y;
-  int width;
-  int height;
-  char text[100];
-  ALLEGRO_COLOR color;
-  ALLEGRO_COLOR colorHover;
-  ALLEGRO_FONT *font;
-  bool hover;
-  bool click;
-};
-
-int getCenter(ALLEGRO_FONT *font, const char *text)
-{
-  int text_x = SCREEN_WIDTH / 2 - al_get_text_width(font, text) / 2;
-  return text_x;
-}
-
-struct text createText(int id, int x, int y, const char *text, ALLEGRO_COLOR color, ALLEGRO_COLOR colorHover, ALLEGRO_FONT *font)
-{
-  struct text t;
-  t.id = id;
-  t.x = x;
-  t.y = y;
-  t.width = al_get_text_width(font, text);
-  t.height = al_get_font_line_height(font);
-  strncpy(t.text, text, sizeof(t.text) - 1);
-  t.text[sizeof(t.text) - 1] = '\0';
-  t.color = color;
-  t.colorHover = colorHover;
-  t.font = font;
-  t.hover = false;
-  t.click = false;
-  return t;
-}
-
-int getCenterY(ALLEGRO_FONT *font, const char *text, int y, int height)
-{
-  int text_y = SCREEN_HEIGHT / 2 - height / 2;
-  return text_y;
-}
-
-void initializeMenuTexts(struct text texts[7], ALLEGRO_FONT *font)
-{
-  int height = 19 * al_get_font_line_height(font);
-  int y = getCenterY(font, "Player V.S Player", 100, height);
-  texts[0] = createText(0, getCenter(font, "Player V.S Player"), y, "Player V.S Player", al_map_rgb(0, 0, 0), HOVER, font);
-  y += 2*al_get_font_line_height(font);
-  texts[1] = createText(1, getCenter(font, "Player V.S Computer"), y, "Player V.S Computer", al_map_rgb(0, 0, 0), HOVER, font);
-  y += 2*al_get_font_line_height(font);
-  texts[2] = createText(2, getCenter(font, "Continue vs Player"), y, "Continue vs Player", al_map_rgb(0, 0, 0), HOVER, font);
-  y += 2*al_get_font_line_height(font);
-  texts[3] = createText(3, getCenter(font, "Continue vs Computer"), y, "Continue vs Computer", al_map_rgb(0, 0, 0), HOVER, font);
-  y += 2*al_get_font_line_height(font);
-  texts[4] = createText(4, getCenter(font, "History"), y, "History", al_map_rgb(0, 0, 0), HOVER, font);
-  y += 2*al_get_font_line_height(font);
-  texts[5] = createText(5, getCenter(font, "Help"), y, "Help", al_map_rgb(0, 0, 0), HOVER, font);
-  y += 2*al_get_font_line_height(font);
-  texts[6] = createText(6, getCenter(font, "Quit"), y, "Quit", al_map_rgb(0, 0, 0), HOVER, font);
-}
-
-void drawText(struct text texts[], int length)
-{
-  for (size_t i = 0; i < length; i++)
-  {
-    if (texts[i].hover)
-    {
-      al_draw_text(texts[i].font, texts[i].colorHover, texts[i].x, texts[i].y, 0, texts[i].text);
-    }
-    else
-    {
-      al_draw_text(texts[i].font, texts[i].color, texts[i].x, texts[i].y, 0, texts[i].text);
-    }
-  }
 }
 
 bool initializeAllegro(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont)
@@ -330,6 +180,498 @@ bool initializeAllegro(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_F
   }
 
   return true;
+}
+
+ALLEGRO_EVENT_QUEUE *setupEventQueue(ALLEGRO_DISPLAY **display)
+{
+  ALLEGRO_EVENT_QUEUE *event_queue = al_create_event_queue();
+  al_register_event_source(event_queue, al_get_display_event_source(*display));
+  al_register_event_source(event_queue, al_get_mouse_event_source());
+  return event_queue;
+}
+
+int getCenter(ALLEGRO_FONT *font, const char *text)
+{
+  int text_x = SCREEN_WIDTH / 2 - al_get_text_width(font, text) / 2;
+  return text_x;
+}
+
+struct text createText(int id, int x, int y, const char *text, ALLEGRO_COLOR color, ALLEGRO_COLOR colorHover, ALLEGRO_FONT *font)
+{
+  struct text t;
+  t.id = id;
+  t.x = x;
+  t.y = y;
+  t.width = al_get_text_width(font, text);
+  t.height = al_get_font_line_height(font);
+  strncpy(t.text, text, sizeof(t.text) - 1);
+  t.text[sizeof(t.text) - 1] = '\0';
+  t.color = color;
+  t.colorHover = colorHover;
+  t.font = font;
+  t.hover = false;
+  t.click = false;
+  return t;
+}
+
+int getCenterY(ALLEGRO_FONT *font, const char *text, int y, int height)
+{
+  int text_y = SCREEN_HEIGHT / 2 - height / 2;
+  return text_y;
+}
+
+void initializeMenuTexts(struct text texts[7], ALLEGRO_FONT *font)
+{
+  int height = 19 * al_get_font_line_height(font);
+  int y = getCenterY(font, "Player V.S Player", 100, height);
+  texts[0] = createText(0, getCenter(font, "Player V.S Player"), y, "Player V.S Player", al_map_rgb(0, 0, 0), HOVER, font);
+  y += 2 * al_get_font_line_height(font);
+  texts[1] = createText(1, getCenter(font, "Player V.S Computer"), y, "Player V.S Computer", al_map_rgb(0, 0, 0), HOVER, font);
+  y += 2 * al_get_font_line_height(font);
+  texts[2] = createText(2, getCenter(font, "Continue vs Player"), y, "Continue vs Player", al_map_rgb(0, 0, 0), HOVER, font);
+  y += 2 * al_get_font_line_height(font);
+  texts[3] = createText(3, getCenter(font, "Continue vs Computer"), y, "Continue vs Computer", al_map_rgb(0, 0, 0), HOVER, font);
+  y += 2 * al_get_font_line_height(font);
+  texts[4] = createText(4, getCenter(font, "History"), y, "History", al_map_rgb(0, 0, 0), HOVER, font);
+  y += 2 * al_get_font_line_height(font);
+  texts[5] = createText(5, getCenter(font, "Help"), y, "Help", al_map_rgb(0, 0, 0), HOVER, font);
+  y += 2 * al_get_font_line_height(font);
+  texts[6] = createText(6, getCenter(font, "Quit"), y, "Quit", al_map_rgb(0, 0, 0), HOVER, font);
+}
+
+void drawText(struct text texts[], int length)
+{
+  for (size_t i = 0; i < length; i++)
+  {
+    if (texts[i].hover)
+    {
+      al_draw_text(texts[i].font, texts[i].colorHover, texts[i].x, texts[i].y, 0, texts[i].text);
+    }
+    else
+    {
+      al_draw_text(texts[i].font, texts[i].color, texts[i].x, texts[i].y, 0, texts[i].text);
+    }
+  }
+}
+
+bool isHoveringText(struct text texts[], int mouse_x, int mouse_y, int size)
+{
+  for (size_t i = 0; i < size; i++)
+  {
+    texts[i].hover = (mouse_x >= texts[i].x && mouse_x <= texts[i].x + texts[i].width &&
+                      mouse_y >= texts[i].y && mouse_y <= texts[i].y + texts[i].height);
+    if (texts[i].hover)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+int mouseClickText(struct text texts[], int mouse_x, int mouse_y, int size)
+{
+  for (size_t i = 0; i < size; i++)
+  {
+    if (mouse_x >= texts[i].x && mouse_x <= texts[i].x + texts[i].width &&
+        mouse_y >= texts[i].y && mouse_y <= texts[i].y + texts[i].height)
+    {
+      return texts[i].id;
+    }
+  }
+  return -1;
+}
+
+void onMouseClickMenuText(struct text texts[], int mouse_x, int mouse_y, bool *running, bool *menuRunning, GameState *currentState)
+{
+  switch (mouseClickText(texts, mouse_x, mouse_y, 7))
+  {
+  case 0:
+    *menuRunning = false;
+    *currentState = GAME;
+    break;
+  case 1:
+    *menuRunning = false;
+    *currentState = GAME_COMPUTER;
+    break;
+  case 2:
+    *menuRunning = false;
+    *currentState = LOAD_GAME;
+    break;
+  case 3:
+    *menuRunning = false;
+    *currentState = LOAD_GAME_COMPUTER;
+    break;
+  case 4:
+    *menuRunning = 0;
+    *currentState = HISTORY;
+    break;
+  case 5:
+    *menuRunning = false;
+    *currentState = HELP;
+    break;
+  case 6:
+    *menuRunning = false;
+    *running = false;
+    break;
+  default:
+    break;
+  }
+}
+
+int handleMenuEvents(struct text texts[], bool *running, bool *menuRunning, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont, GameState *currentState)
+{
+  bool hoveringText = false;
+  ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
+  ALLEGRO_EVENT ev;
+  al_wait_for_event(event_queue, &ev);
+
+  if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
+  {
+    al_destroy_display(*display);
+  }
+  else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
+  {
+    int mouse_x = ev.mouse.x;
+    int mouse_y = ev.mouse.y;
+    hoveringText = isHoveringText(texts, mouse_x, mouse_y, 7);
+
+    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
+    {
+      onMouseClickMenuText(texts, mouse_x, mouse_y, running, menuRunning, currentState);
+      return 0;
+    }
+    al_destroy_event_queue(event_queue);
+  }
+  return -1;
+}
+
+void menu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont, GameState *currentState, bool *running)
+{
+  struct text texts[7] = {0};
+
+  bool menuRunning = true;
+  initializeMenuTexts(texts, *font);
+
+  while (menuRunning)
+  {
+    al_clear_to_color(al_map_rgb(255, 255, 255));
+
+    ALLEGRO_FONT *titleFont = al_load_ttf_font("MinecraftRegular-Bmg3.otf", TITLE_TEXT, 0);
+
+    al_draw_text(titleFont, al_map_rgb(200, 0, 0), getCenter(titleFont, "SeegAllegro"), 50, 0, "Seeg");
+    al_draw_text(titleFont, al_map_rgb(150, 0, 150), getCenter(titleFont, "SeegAllegro") + al_get_text_width(titleFont, "Seeg"), 50, 0, "A");
+    al_draw_text(titleFont, al_map_rgb(0, 0, 200), getCenter(titleFont, "SeegAllegro") + al_get_text_width(titleFont, "SeegA"), 50, 0, "llegro");
+
+    drawText(texts, sizeof(texts) / sizeof(texts[0]));
+
+    al_flip_display();
+
+    handleMenuEvents(texts, running, &menuRunning, display, font, smallFont, currentState);
+  }
+}
+
+void saveGameState(struct tile board[5][5], int turn, char *filename, int pieces, double currentTime)
+{
+  FILE *file = fopen(filename, "w");
+  if (file == NULL)
+  {
+    printf("Error opening file!\n");
+    return;
+  }
+  fprintf(file, "%d\n", turn);
+  fprintf(file, "%d\n", pieces);
+  fprintf(file, "%f\n", currentTime);
+  for (size_t i = 0; i < 5; i++)
+  {
+    for (size_t j = 0; j < 5; j++)
+    {
+      fprintf(file, "%d ", board[i][j].piece);
+    }
+    fprintf(file, "\n");
+  }
+  fclose(file);
+}
+
+void saveGameOnHistory(int turn, double currentTime, int winner, bool isComputer, int winType)
+{
+  FILE *file = fopen("history.txt", "a");
+  if (file == NULL)
+  {
+    printf("Error opening file!\n");
+    return;
+  }
+  fprintf(file, "Turns: %d\n", turn);
+  fprintf(file, "Time: %.2f\n", currentTime);
+  fprintf(file, "Result: %d\n", winType);
+  fprintf(file, "Winner: %d\n", winner);
+  fprintf(file, "Computer: %d\n", isComputer);
+
+  fclose(file);
+}
+
+void loadGameState(struct tile board[5][5], int *turn, char *filename, int *pieces, double *currentTime)
+{
+  FILE *file = fopen(filename, "r");
+  if (file == NULL)
+  {
+    printf("Error opening file!\n");
+    return;
+  }
+  fscanf(file, "%d", turn);
+  fscanf(file, "%d", pieces);
+  fscanf(file, "%lf", currentTime);
+  for (size_t i = 0; i < 5; i++)
+  {
+    for (size_t j = 0; j < 5; j++)
+    {
+      fscanf(file, "%d", &board[i][j].piece);
+    }
+  }
+  fclose(file);
+}
+
+void onMouseClickPauseMenuText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], int mouse_x, int mouse_y, GameState *currentState, bool *isPaused, bool *gameRunning, struct tile board[5][5], int turn, int pieces, double currentTime, bool *saved, bool isComputer)
+{
+  switch (mouseClickText(texts, mouse_x, mouse_y, 3))
+  {
+  case 0:
+    *isPaused = false;
+    break;
+  case 1:
+    if (isComputer)
+    {
+      saveGameState(board, turn, "game_save_computer.txt", pieces, currentTime);
+    }
+    else
+    {
+      saveGameState(board, turn, "game_save.txt", pieces, currentTime);
+    }
+    *saved = true;
+    break;
+  case 2:
+    *isPaused = false;
+    *gameRunning = false;
+    *currentState = MAIN_MENU;
+    break;
+  default:
+    break;
+  }
+}
+
+void handlePauseMenuEvents(struct text texts[], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, GameState *currentState, bool *isPaused, bool *gameRunning, struct tile board[5][5], int turn, int pieces, double currentTime, bool *saved, bool isComputer)
+{
+  bool hoveringText = false;
+  ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
+  ALLEGRO_EVENT ev;
+  al_wait_for_event(event_queue, &ev);
+
+  if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
+  {
+    al_destroy_display(*display);
+  }
+  else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
+  {
+    int mouse_x = ev.mouse.x;
+    int mouse_y = ev.mouse.y;
+    hoveringText = isHoveringText(texts, mouse_x, mouse_y, 3);
+    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
+    {
+      onMouseClickPauseMenuText(display, font, texts, mouse_x, mouse_y, currentState, isPaused, gameRunning, board, turn, pieces, currentTime, saved, isComputer);
+    }
+    al_destroy_event_queue(event_queue);
+  }
+}
+
+void initializePauseMenuTexts(struct text texts[], ALLEGRO_FONT *font)
+{
+  char resume[10] = "Resume";
+  char saveGame[10] = "Save Game";
+  char exit[10] = "Exit";
+  float y = 60;
+
+  texts[0] = createText(0, getCenter(font, resume), y, resume, al_map_rgb(0, 0, 0), HOVER, font);
+  y += 1.2 * al_get_font_line_height(font);
+  texts[1] = createText(1, getCenter(font, saveGame), y, saveGame, al_map_rgb(0, 0, 0), HOVER, font);
+  y += 1.2 * al_get_font_line_height(font);
+  texts[2] = createText(2, getCenter(font, exit), y, exit, al_map_rgb(0, 0, 0), HOVER, font);
+}
+
+void pauseMenu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], GameState *currentState, bool *isPaused, bool *gameRunning, size_t textLength, struct tile board[5][5], int turn, int pieces, double currentTime, bool *saved, bool isComputer)
+{
+  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, "GAME IS PAUSED"), 10, 0, "GAME IS PAUSED");
+
+  drawText(texts, textLength);
+
+  al_flip_display();
+
+  if (*saved)
+  {
+    al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, "Game saved"), SCREEN_HEIGHT - 40, 0, "Game saved");
+  }
+
+  handlePauseMenuEvents(texts, display, font, currentState, isPaused, gameRunning, board, turn, pieces, currentTime, saved, isComputer);
+}
+
+void onMouseClickGameOverText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], int mouse_x, int mouse_y, bool *running, GameState *currentState, bool isComputer)
+{
+  switch (mouseClickText(texts, mouse_x, mouse_y, 2))
+  {
+  case 0:
+    *running = false;
+    *currentState = isComputer ? GAME_COMPUTER : GAME;
+    break;
+  case 1:
+    *running = false;
+    *currentState = MAIN_MENU;
+    break;
+  default:
+    break;
+  }
+}
+
+int handleGameOverEvents(struct text texts[], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, GameState *currentState, bool isComputer)
+{
+  ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
+  ALLEGRO_EVENT ev;
+  bool hoveringText = false;
+  al_wait_for_event(event_queue, &ev);
+  if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
+  {
+    al_destroy_display(*display);
+  }
+  else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
+  {
+    int mouse_x = ev.mouse.x;
+    int mouse_y = ev.mouse.y;
+
+    hoveringText = isHoveringText(texts, mouse_x, mouse_y, 2);
+    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
+    {
+      onMouseClickGameOverText(display, font, texts, mouse_x, mouse_y, running, currentState, isComputer);
+    }
+  }
+  return -1;
+}
+
+void drawGameOver(int *winner, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, GameState *currentState, bool isComputer)
+{
+  bool gameOverRunning = true;
+  char text[20];
+  char text1[20] = "Play Again";
+  char text2[20] = "Back to Menu";
+  struct text texts[2] = {0};
+  int y = 200 + al_get_font_line_height(*font);
+  texts[0] = createText(0, getCenter(*font, text1), y, text1, al_map_rgb(0, 0, 0), HOVER, *font);
+  y += 4 * al_get_font_line_height(*font);
+  texts[1] = createText(1, getCenter(*font, text2), y, text2, al_map_rgb(0, 0, 0), HOVER, *font);
+  y = 200 + al_get_font_line_height(*font);
+
+  sprintf(text, "Player %d Wins!", *winner);
+  y += 2 * al_get_font_line_height(*font);
+  while (gameOverRunning)
+  {
+    al_clear_to_color(al_map_rgb(255, 255, 255));
+    al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, "GAME OVER"), 120, 0, "GAME OVER");
+    if (*winner != 3)
+    {
+      al_draw_textf(*font, *winner == 2 ? al_map_rgb(0, 0, 200) : al_map_rgb(200, 0, 0), getCenter(*font, text), y, 0, "%s", text);
+    }
+    else
+    {
+      al_draw_text(*font, al_map_rgb(150, 0, 150), getCenter(*font, "Draw!"), y, 0, "Draw!");
+    }
+
+    drawText(texts, sizeof(texts) / sizeof(texts[0]));
+
+    handleGameOverEvents(texts, display, font, &gameOverRunning, currentState, isComputer);
+
+    al_flip_display();
+  }
+  *winner = 0;
+}
+
+struct tile createTile(int id, int x, int y, int x1, int y1, int x2, int y2, ALLEGRO_COLOR color)
+{
+  struct tile t;
+  t.id = id;
+  t.x = x;
+  t.y = y;
+  t.x1 = x1;
+  t.y1 = y1;
+  t.x2 = x2;
+  t.y2 = y2;
+  t.color = color;
+  t.hover = false;
+  t.click = false;
+  t.positionable = false;
+  t.piece = 0;
+  return t;
+}
+
+void initializeTiles(struct tile tile[5][5])
+{
+  int id = 0;
+  for (size_t x = 0; x < 5; x++)
+  {
+    for (size_t y = 0; y < 5; y++)
+    {
+      if (x == 2 && y == 2)
+      {
+        tile[x][y] = createTile(id, x, y, CENTER_BOARD_X + x * TILE_SIZE, CENTER_BOARD_Y + y * TILE_SIZE, TILE_END_X + x * TILE_SIZE, TILE_END_Y + y * TILE_SIZE, TILE3_COLOR);
+      }
+      else if ((x % 2 == 0 && y % 2 == 0) || (x % 2 != 0 && y % 2 != 0))
+      {
+        tile[x][y] = createTile(id, x, y, CENTER_BOARD_X + x * TILE_SIZE, CENTER_BOARD_Y + y * TILE_SIZE, TILE_END_X + x * TILE_SIZE, TILE_END_Y + y * TILE_SIZE, TILE1_COLOR);
+      }
+      else
+      {
+        tile[x][y] = createTile(id, x, y, CENTER_BOARD_X + x * TILE_SIZE, CENTER_BOARD_Y + y * TILE_SIZE, TILE_END_X + x * TILE_SIZE, TILE_END_Y + y * TILE_SIZE, TILE2_COLOR);
+      }
+      id++;
+    }
+  }
+}
+
+void drawTile(struct tile tile, int turn)
+{
+  if (tile.hover)
+  {
+    al_draw_filled_rectangle(tile.x1, tile.y1, tile.x2, tile.y2, turn % 2 == 0 ? HOVER: HOVER2);
+  }
+  else if (tile.positionable)
+  {
+    al_draw_filled_rectangle(tile.x1, tile.y1, tile.x2, tile.y2, al_map_rgba(0, 255, 0, 100));
+  }
+  else
+  {
+    al_draw_filled_rectangle(tile.x1, tile.y1, tile.x2, tile.y2, tile.color);
+  }
+}
+
+void drawBoard(struct tile tile[5][5], int turn)
+{
+  for (size_t x = 0; x <= 6; x++)
+  {
+    for (size_t y = 0; y <= 6; y++)
+    {
+      if (x == 0 || y == 0 || x == 6 || y == 6)
+      {
+        al_draw_filled_rectangle((CENTER_BOARD_X - TILE_SIZE) + x * TILE_SIZE, (CENTER_BOARD_Y - TILE_SIZE) + y * TILE_SIZE, (TILE_END_X - TILE_SIZE) + x * TILE_SIZE, (TILE_END_Y - TILE_SIZE) + y * TILE_SIZE, al_map_rgb(150, 100, 50));
+      }
+      else if (x > 0 && y > 0 && x < 6 && y < 6)
+      {
+        drawTile(tile[x - 1][y - 1], turn);
+        if (tile[x - 1][y - 1].piece == 1)
+        {
+          al_draw_filled_circle((CENTER_BOARD_X - (TILE_SIZE / 2)) + x * TILE_SIZE, (CENTER_BOARD_Y - (TILE_SIZE / 2)) + y * TILE_SIZE, TILE_SIZE / 3, al_map_rgb(200, 0, 0));
+        }
+        else if (tile[x - 1][y - 1].piece == 2)
+        {
+          al_draw_filled_circle((CENTER_BOARD_X - (TILE_SIZE / 2)) + x * TILE_SIZE, (CENTER_BOARD_Y - (TILE_SIZE / 2)) + y * TILE_SIZE, TILE_SIZE / 3, al_map_rgb(0, 0, 200));
+        }
+      }
+    }
+  }
 }
 
 void isHoveringTile(struct tile board[5][5], int mouse_x, int mouse_y, bool *hoveringTile)
@@ -480,7 +822,6 @@ void setTilePossibility(struct tile board[5][5], int i, int j, bool hasPossibili
   }
   else
   {
-    printf("No possibilities\n");
     clearPositionable(board);
   }
 }
@@ -511,12 +852,6 @@ bool checkPossibilities(struct tile board[5][5], int turn)
   }
   return possibilities > 0;
 }
-
-typedef struct
-{
-  int x;
-  int y;
-} Coordinates;
 
 bool eatPieces(struct tile board[5][5], Coordinates eatenCoords[4], int count)
 {
@@ -586,13 +921,11 @@ void checkSmallWinPieces(int upPiece1, int upPiece2, int downPiece1, int downPie
     {
       *winner = 1;
       *winType = 2;
-      printf("Player 1 wins\n");
     }
     else
     {
       *winner = 2;
       *winType = 2;
-      printf("Player 2 wins\n");
     }
   }
   else if (upPiece1 == 0 && upPiece2 >= 0 && downPiece1 >= 0 && downPiece2 == 0)
@@ -601,13 +934,11 @@ void checkSmallWinPieces(int upPiece1, int upPiece2, int downPiece1, int downPie
     {
       *winner = 1;
       *winType = 2;
-      printf("Player 1 wins\n");
     }
     else
     {
       *winner = 2;
       *winType = 2;
-      printf("Player 2 wins\n");
     }
   }
 }
@@ -755,13 +1086,11 @@ void checkWin(struct tile board[5][5], int turn, bool *running, int *winner, int
   }
   if (player1 == 0)
   {
-    printf("Player 2 wins\n");
     *winner = 2;
     *winType = 1;
   }
   else if (player2 == 0)
   {
-    printf("Player 1 wins\n");
     *winner = 1;
     *winType = 1;
   }
@@ -787,7 +1116,6 @@ void checkDraw(struct tile board[5][5], int turn, bool *running, int *winner, in
   }
   if (player1 <= 3 && player2 <= 3)
   {
-    printf("Draw\n");
     *winner = 3;
     *winType = 3;
   }
@@ -919,113 +1247,279 @@ bool onMouseClickTile(struct tile board[5][5], int mouse_x, int mouse_y, bool *r
   return false;
 }
 
-bool isHoveringText(struct text texts[], int mouse_x, int mouse_y, int size)
+int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, struct tile board[5][5], ALLEGRO_FONT **font, int *round, struct tile *selectedTile, bool hasPossibilities, GameState *currentState, bool *isPaused, double *currentTime, time_t startTime, int *winner, int *winType, bool *isConsecutiveTurn)
 {
-  for (size_t i = 0; i < size; i++)
-  {
-    texts[i].hover = (mouse_x >= texts[i].x && mouse_x <= texts[i].x + texts[i].width &&
-                      mouse_y >= texts[i].y && mouse_y <= texts[i].y + texts[i].height);
-    if (texts[i].hover)
-    {
-      return true;
-    }
-  }
-  return false;
-}
-
-int mouseClickText(struct text texts[], int mouse_x, int mouse_y, int size)
-{
-  for (size_t i = 0; i < size; i++)
-  {
-    if (mouse_x >= texts[i].x && mouse_x <= texts[i].x + texts[i].width &&
-        mouse_y >= texts[i].y && mouse_y <= texts[i].y + texts[i].height)
-    {
-      return texts[i].id;
-    }
-  }
-  return -1;
-}
-
-void onMouseClickMenuText(struct text texts[], int mouse_x, int mouse_y, bool *running, bool *menuRunning, GameState *currentState)
-{
-  switch (mouseClickText(texts, mouse_x, mouse_y, 7))
-  {
-  case 0:
-    *menuRunning = false;
-    *currentState = GAME;
-    break;
-  case 1:
-    *menuRunning = false;
-    *currentState = GAME_COMPUTER;
-    break;
-  case 2:
-    *menuRunning = false;
-    *currentState = LOAD_GAME;
-    break;
-  case 3:
-    *menuRunning = false;
-    *currentState = LOAD_GAME_COMPUTER;
-    break;
-  case 4:
-    *menuRunning = 0;
-    *currentState = HISTORY;
-    break;
-  case 5:
-    *menuRunning = false;
-    *currentState = HELP;
-    break;
-  case 6:
-    *menuRunning = false;
-    *running = false;
-    break;
-  default:
-    break;
-  }
-}
-
-int handleMenuEvents(struct text texts[], bool *running, bool *menuRunning, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont, GameState *currentState)
-{
+  bool hoveringTile = false;
   bool hoveringText = false;
+  ALLEGRO_TIMER *timer = al_create_timer(1.0 / 20.0);
   ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
+  al_register_event_source(event_queue, al_get_timer_event_source(timer));
   ALLEGRO_EVENT ev;
+  al_start_timer(timer);
   al_wait_for_event(event_queue, &ev);
-
   if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
   {
     al_destroy_display(*display);
+  }
+  else if (ev.type == ALLEGRO_EVENT_TIMER)
+  {
+    *currentTime = difftime(time(NULL), startTime);
   }
   else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
   {
     int mouse_x = ev.mouse.x;
     int mouse_y = ev.mouse.y;
-    hoveringText = isHoveringText(texts, mouse_x, mouse_y, 7);
 
-    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
+    isHoveringTile(board, mouse_x, mouse_y, &hoveringTile);
+    hoveringText = isHoveringText(texts, mouse_x, mouse_y, 1);
+    ;
+    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringTile)
     {
-      onMouseClickMenuText(texts, mouse_x, mouse_y, running, menuRunning, currentState);
-      return 0;
+      if (onMouseClickTile(board, mouse_x, mouse_y, running, round, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn))
+      {
+        return 1;
+      }
     }
-    al_destroy_event_queue(event_queue);
+    else if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
+    {
+      *isPaused = true;
+    }
   }
+  al_destroy_timer(timer);
   return -1;
 }
 
-void menu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont, GameState *currentState, bool *running)
+void checkTilePositionables(struct tile board[5][5], int x, int y, bool *up, bool *down, bool *left, bool *right, bool hasPossibilities)
 {
-  struct text texts[7] = {0};
-
-  bool menuRunning = true;
-  initializeMenuTexts(texts, *font);
-
-  while (menuRunning)
+  if (x - 1 >= 0)
   {
-    al_clear_to_color(al_map_rgb(255, 255, 255));
+    if (hasPossibilities)
+    {
+      *left = board[x - 1][y].positionable;
+    }
+    else if (board[x - 1][y].piece == 1)
+    {
+      *left = true;
+    }
+  }
+  if (x + 1 < 5)
+  {
+    if (hasPossibilities)
+    {
+      *right = board[x + 1][y].positionable;
+    }
+    else if (board[x + 1][y].piece == 1)
+    {
+      *right = true;
+    }
+  }
+  if (y - 1 >= 0)
+  {
+    if (hasPossibilities)
+    {
+      *up = board[x][y - 1].positionable;
+    }
+    else if (board[x][y - 1].piece == 1)
+    {
+      *up = true;
+    }
+  }
+  if (y + 1 < 5)
+  {
+    if (hasPossibilities)
+    {
+      *down = board[x][y + 1].positionable;
+    }
+    else if (board[x][y + 1].piece == 1)
+    {
+      *down = true;
+    }
+  }
+}
 
-    drawText(texts, sizeof(texts) / sizeof(texts[0]));
+void computerMove(struct tile board[5][5], bool *running, int *turn, struct tile *selectedTile, bool hasPossibilities, int *winner, int *winType, bool *isConsecutiveTurn, bool right, bool left, bool up, bool down)
+{
+  if (right)
+  {
+    onMouseClickTile(board, selectedTile->x2 + 5, selectedTile->y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
+  }
+  if (left)
+  {
+    onMouseClickTile(board, selectedTile->x1 - 5, selectedTile->y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
+  }
+  if (down)
+  {
+    onMouseClickTile(board, selectedTile->x1 + 5, selectedTile->y2 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
+  }
+  if (up)
+  {
+    onMouseClickTile(board, selectedTile->x1 + 5, selectedTile->y1 - 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
+  }
+}
 
-    al_flip_display();
+void computerTurn(struct tile board[5][5], bool *running, int *turn, struct tile *selectedTile, bool hasPossibilities, int *winner, int *winType, bool *isConsecutiveTurn)
+{
+  int x, y;
+  bool up = false;
+  bool down = false;
+  bool left = false;
+  bool right = false;
+  if (*turn < 12)
+  {
+    do
+    {
+      x = rand() % 5;
+      y = rand() % 5;
+    } while (board[x][y].piece != 0 || board[x][y].id == 12);
+    onMouseClickTile(board, board[x][y].x1 + 5, board[x][y].y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
+  }
+  else
+  {
+    usleep(300000);
+    bool pieceFound = false;
+    if (selectedTile->id == -1 && hasPossibilities)
+    {
+      for (x = 0; x < 5 && !pieceFound; x++)
+      {
+        for (y = 0; y < 5 && !pieceFound; y++)
+        {
+          if (board[x][y].piece == 2)
+          {
+            canEatCoordinates(board, x, y, turn, &left, &right, &up, &down);
+            if (left || right || up || down)
+            {
+              pieceFound = true;
+              onMouseClickTile(board, board[x][y].x1 + 5, board[x][y].y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
+            }
+          }
+        }
+      }
+      while (!pieceFound)
+      {
+        do
+        {
+          x = rand() % 5;
+          y = rand() % 5;
+        } while (board[x][y].piece != 2);
+        checkTilePossibilities(board, x, y, &up, &down, &left, &right);
+        if (left || right || up || down)
+        {
+          pieceFound = true;
+          onMouseClickTile(board, board[x][y].x1 + 5, board[x][y].y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
+        }
+      }
+    }
+    else
+    {
+      while (!pieceFound)
+      {
+        do
+        {
+          x = rand() % 5;
+          y = rand() % 5;
+        } while (board[x][y].piece != 2);
 
-    handleMenuEvents(texts, running, &menuRunning, display, font, smallFont, currentState);
+        onMouseClickTile(board, board[x][y].x1 + 5, board[x][y].y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
+        checkTilePositionables(board, selectedTile->x, selectedTile->y, &up, &down, &left, &right, hasPossibilities);
+        if (left || right || up || down)
+        {
+          pieceFound = true;
+        }
+      }
+    }
+    if (*isConsecutiveTurn)
+    {
+      checkTilePositionables(board, selectedTile->x, selectedTile->y, &up, &down, &left, &right, hasPossibilities);
+      computerMove(board, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn, right, left, up, down);
+      *isConsecutiveTurn = false;
+    }
+    computerMove(board, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn, right, left, up, down);
+  }
+}
+
+void game(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, GameState *currentState, int turn, int pieces, struct tile board[5][5], double savedTime, bool isComputer, int *winner)
+{
+  bool gameRunning = true;
+  struct text texts[1] = {0};
+  struct text textsMenu[3] = {0};
+  texts[0] = createText(0, SCREEN_WIDTH - al_get_text_width(*font, "Pause"), 20, "Pause", al_map_rgb(0, 0, 0), HOVER, *font);
+  struct tile selectedTile = {0};
+  bool isConsecutiveTurn = false;
+  bool hasPossibilities = false;
+  bool isPaused = false;
+  bool saved = false;
+  initializePauseMenuTexts(textsMenu, *font);
+  time_t startTime = time(NULL);
+  double elapsedTime = 0;
+  double currentTime = savedTime;
+  int winType = 0;
+
+  if (savedTime != 0)
+  {
+    startTime = time(NULL) - currentTime;
+    elapsedTime = currentTime;
+  }
+  while (gameRunning)
+  {
+    if (isPaused)
+    {
+      pauseMenu(display, font, textsMenu, currentState, &isPaused, &gameRunning, sizeof(textsMenu) / sizeof(textsMenu[0]), board, turn, pieces, currentTime, &saved, isComputer);
+      if (!isPaused)
+      {
+        startTime = time(NULL) - currentTime;
+        saved = false;
+      }
+    }
+    else
+    {
+      currentTime = difftime(time(NULL), startTime);
+      elapsedTime = currentTime;
+      al_clear_to_color(al_map_rgb(255, 255, 255));
+      drawText(texts, sizeof(texts) / sizeof(texts[0]));
+      drawBoard(board, turn);
+      int y = 10;
+      al_draw_text(*font, al_map_rgb(0, 0, 0), 10, y, 0, "Turn: ");
+      al_draw_textf(*font, turn % 2 == 0 ? al_map_rgb(200, 0, 0) : al_map_rgb(0, 0, 200), al_get_text_width(*font, "Turn: "), y, 0, "%s", turn % 2 == 0 ? "Player 1" : "Player 2");
+      y += al_get_font_line_height(*font);
+      al_draw_textf(*font, al_map_rgb(0, 0, 0), 10, y, 0, "Time: %.0f", currentTime);
+
+      al_flip_display();
+
+      hasPossibilities = checkPossibilities(board, turn);
+
+      if (isComputer && turn % 2 != 0)
+      {
+        computerTurn(board, &gameRunning, &turn, &selectedTile, hasPossibilities, winner, &winType, &isConsecutiveTurn);
+        pieces++;
+        if (pieces % 2 == 0 && pieces != 0 && pieces < 24)
+        {
+          turn++;
+        }
+        else if (pieces >= 24 && !isConsecutiveTurn)
+        {
+          turn++;
+          clearPositionable(board);
+        }
+      }
+      else if (handleGameEvents(texts, running, display, board, font, &turn, &selectedTile, hasPossibilities, currentState, &isPaused, &currentTime, startTime, winner, &winType, &isConsecutiveTurn) == 1)
+      {
+        pieces++;
+        if (pieces % 2 == 0 && pieces != 0 && pieces < 24)
+        {
+          turn++;
+        }
+        else if (pieces >= 24)
+        {
+          turn++;
+        }
+      }
+      if (*winner > 0)
+      {
+        saveGameOnHistory(turn, elapsedTime, *winner, isComputer, winType);
+        gameRunning = false;
+        drawGameOver(winner, display, font, currentState, isComputer);
+      }
+    }
   }
 }
 
@@ -1299,7 +1793,7 @@ void page11(struct tile board[5][5], ALLEGRO_FONT **font)
   board[4][2].piece = 2;
 }
 
-void helpView(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont, GameState *currentState, bool *running)
+void help(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont, GameState *currentState, bool *running)
 {
   struct text texts[3] = {0};
   struct tile board[5][5] = {0};
@@ -1316,7 +1810,7 @@ void helpView(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **sma
   {
     al_clear_to_color(al_map_rgb(200, 255, 255));
     handleHelpEvents(texts, running, &helpRunning, display, font, &page, currentState);
-    drawBoard(board);
+    drawBoard(board, 0);
     drawText(texts, sizeof(texts) / sizeof(texts[0]));
 
     switch (page)
@@ -1364,503 +1858,7 @@ void helpView(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **sma
   }
 }
 
-void saveGameState(struct tile board[5][5], int turn, char *filename, int pieces, double currentTime)
-{
-  FILE *file = fopen(filename, "w");
-  if (file == NULL)
-  {
-    printf("Error opening file!\n");
-    return;
-  }
-  fprintf(file, "%d\n", turn);
-  fprintf(file, "%d\n", pieces);
-  fprintf(file, "%f\n", currentTime);
-  for (size_t i = 0; i < 5; i++)
-  {
-    for (size_t j = 0; j < 5; j++)
-    {
-      fprintf(file, "%d ", board[i][j].piece);
-    }
-    fprintf(file, "\n");
-  }
-  fclose(file);
-}
-
-void saveGameOnHistory(int turn, double currentTime, int winner, bool isComputer, int winType)
-{
-  FILE *file = fopen("history.txt", "a");
-  if (file == NULL)
-  {
-    printf("Error opening file!\n");
-    return;
-  }
-  fprintf(file, "Turns: %d\n", turn);
-  fprintf(file, "Time: %.2f\n", currentTime);
-  fprintf(file, "Result: %d\n", winType);
-  fprintf(file, "Winner: %d\n", winner);
-  fprintf(file, "Computer: %d\n", isComputer);
-
-  fclose(file);
-}
-
-void loadGameState(struct tile board[5][5], int *turn, char *filename, int *pieces, double *currentTime)
-{
-  FILE *file = fopen(filename, "r");
-  if (file == NULL)
-  {
-    printf("Error opening file!\n");
-    return;
-  }
-  fscanf(file, "%d", turn);
-  fscanf(file, "%d", pieces);
-  fscanf(file, "%lf", currentTime);
-  for (size_t i = 0; i < 5; i++)
-  {
-    for (size_t j = 0; j < 5; j++)
-    {
-      fscanf(file, "%d", &board[i][j].piece);
-    }
-  }
-  fclose(file);
-}
-
-void onMouseClickPauseMenuText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], int mouse_x, int mouse_y, GameState *currentState, bool *isPaused, bool *gameRunning, struct tile board[5][5], int turn, int pieces, double currentTime, bool *saved, bool isComputer)
-{
-  switch (mouseClickText(texts, mouse_x, mouse_y, 3))
-  {
-  case 0:
-    *isPaused = false;
-    break;
-  case 1:
-    if (isComputer)
-    {
-      saveGameState(board, turn, "game_save_computer.txt", pieces, currentTime);
-    }
-    else
-    {
-      saveGameState(board, turn, "game_save.txt", pieces, currentTime);
-    }
-    *saved = true;
-    break;
-  case 2:
-    *isPaused = false;
-    *gameRunning = false;
-    *currentState = MAIN_MENU;
-    break;
-  default:
-    break;
-  }
-}
-
-void handlePauseMenuEvents(struct text texts[], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, GameState *currentState, bool *isPaused, bool *gameRunning, struct tile board[5][5], int turn, int pieces, double currentTime, bool *saved, bool isComputer)
-{
-  bool hoveringText = false;
-  ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
-  ALLEGRO_EVENT ev;
-  al_wait_for_event(event_queue, &ev);
-
-  if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
-  {
-    al_destroy_display(*display);
-  }
-  else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
-  {
-    int mouse_x = ev.mouse.x;
-    int mouse_y = ev.mouse.y;
-    hoveringText = isHoveringText(texts, mouse_x, mouse_y, 3);
-    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
-    {
-      onMouseClickPauseMenuText(display, font, texts, mouse_x, mouse_y, currentState, isPaused, gameRunning, board, turn, pieces, currentTime, saved, isComputer);
-    }
-    al_destroy_event_queue(event_queue);
-  }
-}
-
-void initializePauseMenuTexts(struct text texts[], ALLEGRO_FONT *font)
-{
-  char resume[10] = "Resume";
-  char saveGame[10] = "Save Game";
-  char exit[10] = "Exit";
-  float y = 60;
-
-  texts[0] = createText(0, getCenter(font, resume), y, resume, al_map_rgb(0, 0, 0), HOVER, font);
-  y += 1.2 * al_get_font_line_height(font);
-  texts[1] = createText(1, getCenter(font, saveGame), y, saveGame, al_map_rgb(0, 0, 0), HOVER, font);
-  y += 1.2 * al_get_font_line_height(font);
-  texts[2] = createText(2, getCenter(font, exit), y, exit, al_map_rgb(0, 0, 0), HOVER, font);
-}
-
-void pauseMenu(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], GameState *currentState, bool *isPaused, bool *gameRunning, size_t textLength, struct tile board[5][5], int turn, int pieces, double currentTime, bool *saved, bool isComputer)
-{
-  al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, "GAME IS PAUSED"), 10, 0, "GAME IS PAUSED");
-
-  drawText(texts, textLength);
-
-  al_flip_display();
-
-  if (*saved)
-  {
-    al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, "Game saved"), SCREEN_HEIGHT - 40, 0, "Game saved");
-  }
-
-  handlePauseMenuEvents(texts, display, font, currentState, isPaused, gameRunning, board, turn, pieces, currentTime, saved, isComputer);
-}
-
-int handleGameEvents(struct text texts[], bool *running, ALLEGRO_DISPLAY **display, struct tile board[5][5], ALLEGRO_FONT **font, int *round, struct tile *selectedTile, bool hasPossibilities, GameState *currentState, bool *isPaused, double *currentTime, time_t startTime, int *winner, int *winType, bool *isConsecutiveTurn)
-{
-  bool hoveringTile = false;
-  bool hoveringText = false;
-  ALLEGRO_TIMER *timer = al_create_timer(1.0 / 20.0);
-  ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
-  al_register_event_source(event_queue, al_get_timer_event_source(timer));
-  ALLEGRO_EVENT ev;
-  al_start_timer(timer);
-  al_wait_for_event(event_queue, &ev);
-  if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
-  {
-    al_destroy_display(*display);
-  }
-  else if (ev.type == ALLEGRO_EVENT_TIMER)
-  {
-    *currentTime = difftime(time(NULL), startTime);
-  }
-  else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
-  {
-    int mouse_x = ev.mouse.x;
-    int mouse_y = ev.mouse.y;
-
-    isHoveringTile(board, mouse_x, mouse_y, &hoveringTile);
-    hoveringText = isHoveringText(texts, mouse_x, mouse_y, 1);
-    ;
-    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringTile)
-    {
-      if (onMouseClickTile(board, mouse_x, mouse_y, running, round, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn))
-      {
-        return 1;
-      }
-    }
-    else if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
-    {
-      *isPaused = true;
-    }
-  }
-  al_destroy_timer(timer);
-  return -1;
-}
-
-void checkTilePositionables(struct tile board[5][5], int x, int y, bool *up, bool *down, bool *left, bool *right, bool hasPossibilities)
-{
-  if (x - 1 >= 0)
-  {
-    if (hasPossibilities)
-    {
-      *left = board[x - 1][y].positionable;
-    }
-    else if (board[x - 1][y].piece == 1)
-    {
-      *left = true;
-    }
-  }
-  if (x + 1 < 5)
-  {
-    if (hasPossibilities)
-    {
-      *right = board[x + 1][y].positionable;
-    }
-    else if (board[x + 1][y].piece == 1)
-    {
-      *right = true;
-    }
-  }
-  if (y - 1 >= 0)
-  {
-    if (hasPossibilities)
-    {
-      *up = board[x][y - 1].positionable;
-    }
-    else if (board[x][y - 1].piece == 1)
-    {
-      *up = true;
-    }
-  }
-  if (y + 1 < 5)
-  {
-    if (hasPossibilities)
-    {
-      *down = board[x][y + 1].positionable;
-    }
-    else if (board[x][y + 1].piece == 1)
-    {
-      *down = true;
-    }
-  }
-}
-
-void computerMove(struct tile board[5][5], bool *running, int *turn, struct tile *selectedTile, bool hasPossibilities, int *winner, int *winType, bool *isConsecutiveTurn, bool right, bool left, bool up, bool down)
-{
-  if (right)
-  {
-    onMouseClickTile(board, selectedTile->x2 + 5, selectedTile->y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
-  }
-  if (left)
-  {
-    onMouseClickTile(board, selectedTile->x1 - 5, selectedTile->y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
-  }
-  if (down)
-  {
-    onMouseClickTile(board, selectedTile->x1 + 5, selectedTile->y2 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
-  }
-  if (up)
-  {
-    onMouseClickTile(board, selectedTile->x1 + 5, selectedTile->y1 - 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
-  }
-}
-
-void computerTurn(struct tile board[5][5], bool *running, int *turn, struct tile *selectedTile, bool hasPossibilities, int *winner, int *winType, bool *isConsecutiveTurn)
-{
-  int x, y;
-  bool up = false;
-  bool down = false;
-  bool left = false;
-  bool right = false;
-  if (*turn < 12)
-  {
-    do
-    {
-      x = rand() % 5;
-      y = rand() % 5;
-    } while (board[x][y].piece != 0 || board[x][y].id == 12);
-    onMouseClickTile(board, board[x][y].x1 + 5, board[x][y].y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
-  }
-  else
-  {
-    printf("%d", hasPossibilities);
-    sleep(1);
-    bool pieceFound = false;
-    if (selectedTile->id == -1 && hasPossibilities)
-    {
-      for (x = 0; x < 5 && !pieceFound; x++)
-      {
-        for (y = 0; y < 5 && !pieceFound; y++)
-        {
-          if (board[x][y].piece == 2)
-          {
-            canEatCoordinates(board, x, y, turn, &left, &right, &up, &down);
-            if (left || right || up || down)
-            {
-              pieceFound = true;
-              onMouseClickTile(board, board[x][y].x1 + 5, board[x][y].y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
-            }
-          }
-        }
-      }
-      while (!pieceFound)
-      {
-        do
-        {
-          x = rand() % 5;
-          y = rand() % 5;
-        } while (board[x][y].piece != 2);
-        checkTilePossibilities(board, x, y, &up, &down, &left, &right);
-        if (left || right || up || down)
-        {
-          pieceFound = true;
-          onMouseClickTile(board, board[x][y].x1 + 5, board[x][y].y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
-        }
-      }
-    }
-    else
-    {
-      while (!pieceFound)
-      {
-        do
-        {
-          x = rand() % 5;
-          y = rand() % 5;
-        } while (board[x][y].piece != 2);
-
-        onMouseClickTile(board, board[x][y].x1 + 5, board[x][y].y1 + 5, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn);
-        checkTilePositionables(board, selectedTile->x, selectedTile->y, &up, &down, &left, &right, hasPossibilities);
-        if (left || right || up || down)
-        {
-          pieceFound = true;
-        }
-      }
-    }
-    if (*isConsecutiveTurn)
-    {
-      checkTilePositionables(board, selectedTile->x, selectedTile->y, &up, &down, &left, &right, hasPossibilities);
-      computerMove(board, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn, right, left, up, down);
-      *isConsecutiveTurn = false;
-    }
-    computerMove(board, running, turn, selectedTile, hasPossibilities, winner, winType, isConsecutiveTurn, right, left, up, down);
-  }
-}
-
-void onMouseClickGameOverText(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, struct text texts[], int mouse_x, int mouse_y, bool *running, GameState *currentState, bool isComputer)
-{
-  switch (mouseClickText(texts, mouse_x, mouse_y, 2))
-  {
-  case 0:
-    *running = false;
-    *currentState = GAME;
-    break;
-  case 1:
-    *running = false;
-    *currentState = MAIN_MENU;
-    break;
-  default:
-    break;
-  }
-}
-
-int handleGameOverEvents(struct text texts[], ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, GameState *currentState, bool isComputer)
-{
-  ALLEGRO_EVENT_QUEUE *event_queue = setupEventQueue(display);
-  ALLEGRO_EVENT ev;
-  bool hoveringText = false;
-  al_wait_for_event(event_queue, &ev);
-  if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE)
-  {
-    al_destroy_display(*display);
-  }
-  else if (ev.type == ALLEGRO_EVENT_MOUSE_AXES || ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN)
-  {
-    int mouse_x = ev.mouse.x;
-    int mouse_y = ev.mouse.y;
-
-    hoveringText = isHoveringText(texts, mouse_x, mouse_y, 2);
-    if (ev.type == ALLEGRO_EVENT_MOUSE_BUTTON_DOWN && hoveringText)
-    {
-      onMouseClickGameOverText(display, font, texts, mouse_x, mouse_y, running, currentState, isComputer);
-    }
-  }
-  return -1;
-}
-
-void drawGameOver(int *winner, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, GameState *currentState, bool isComputer)
-{
-  bool gameOverRunning = true;
-  char text[20];
-  char text1[20] = "Play Again";
-  char text2[20] = "Back to Menu";
-  struct text texts[2] = {0};
-  int y = 200 + al_get_font_line_height(*font);
-  texts[0] = createText(0, getCenter(*font, text1), y, text1, al_map_rgb(0, 0, 0), HOVER, *font);
-  y += 2 * al_get_font_line_height(*font);
-  texts[1] = createText(1, getCenter(*font, text2), y, text2, al_map_rgb(0, 0, 0), HOVER, *font);
-
-  sprintf(text, "Player %d Wins!", *winner);
-  y += 2 * al_get_font_line_height(*font);
-  while (gameOverRunning)
-  {
-    al_clear_to_color(al_map_rgb(255, 255, 255));
-    al_draw_text(*font, al_map_rgb(0, 0, 0), getCenter(*font, "GAME OVER"), 120, 0, "GAME OVER");
-    if (*winner != 3)
-    {
-      al_draw_textf(*font, *winner == 2 ? al_map_rgb(0, 0, 200) : al_map_rgb(200, 0, 0), getCenter(*font, text), y, 0, "%s", text);
-    }
-    else
-    {
-      al_draw_text(*font, al_map_rgb(150, 0, 150), getCenter(*font, "Draw!"), y, 0, "Draw!");
-    }
-
-    drawText(texts, sizeof(texts) / sizeof(texts[0]));
-
-    handleGameOverEvents(texts, display, font, &gameOverRunning, currentState, isComputer);
-
-    al_flip_display();
-  }
-  *winner = 0;
-}
-
-void startGame(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, GameState *currentState, int turn, int pieces, struct tile board[5][5], double savedTime, bool isComputer, int *winner)
-{
-  bool gameRunning = true;
-  struct text texts[1] = {0};
-  struct text textsMenu[3] = {0};
-  texts[0] = createText(0, SCREEN_WIDTH - al_get_text_width(*font, "Pause"), 20, "Pause", al_map_rgb(0, 0, 0), HOVER, *font);
-  struct tile selectedTile = {0};
-  bool isConsecutiveTurn = false;
-  bool hasPossibilities = false;
-  bool isPaused = false;
-  bool saved = false;
-  initializePauseMenuTexts(textsMenu, *font);
-  time_t startTime = time(NULL);
-  double elapsedTime = 0;
-  double currentTime = savedTime;
-  int winType = 0;
-
-  if (savedTime != 0)
-  {
-    startTime = time(NULL) - currentTime;
-    elapsedTime = currentTime;
-  }
-  while (gameRunning)
-  {
-    if (isPaused)
-    {
-      pauseMenu(display, font, textsMenu, currentState, &isPaused, &gameRunning, sizeof(textsMenu) / sizeof(textsMenu[0]), board, turn, pieces, currentTime, &saved, isComputer);
-      if (!isPaused)
-      {
-        startTime = time(NULL) - currentTime;
-        saved = false;
-      }
-    }
-    else
-    {
-      currentTime = difftime(time(NULL), startTime);
-      elapsedTime = currentTime;
-      al_clear_to_color(al_map_rgb(255, 255, 255));
-      drawText(texts, sizeof(texts) / sizeof(texts[0]));
-      drawBoard(board);
-      int y = 10;
-      al_draw_text(*font, al_map_rgb(0, 0, 0), 10, y, 0, "Turn: ");
-      al_draw_textf(*font, turn % 2 == 0 ? al_map_rgb(200, 0, 0) : al_map_rgb(0, 0, 200), al_get_text_width(*font, "Turn: "), y, 0, "%s", turn % 2 == 0 ? "Player 1" : "Player 2");
-      y += al_get_font_line_height(*font);
-      al_draw_textf(*font, al_map_rgb(0, 0, 0), 10, y, 0, "Time: %.0f", currentTime);
-
-      al_flip_display();
-
-      hasPossibilities = checkPossibilities(board, turn);
-
-      if (isComputer && turn % 2 != 0)
-      {
-        computerTurn(board, &gameRunning, &turn, &selectedTile, hasPossibilities, winner, &winType, &isConsecutiveTurn);
-        pieces++;
-        if (pieces % 2 == 0 && pieces != 0 && pieces < 24)
-        {
-          turn++;
-        }
-        else if (pieces >= 24 && !isConsecutiveTurn)
-        {
-          turn++;
-          clearPositionable(board);
-        }
-      }
-      else if (handleGameEvents(texts, running, display, board, font, &turn, &selectedTile, hasPossibilities, currentState, &isPaused, &currentTime, startTime, winner, &winType, &isConsecutiveTurn) == 1)
-      {
-        pieces++;
-        if (pieces % 2 == 0 && pieces != 0 && pieces < 24)
-        {
-          turn++;
-        }
-        else if (pieces >= 24)
-        {
-          turn++;
-        }
-      }
-      if (*winner > 0)
-      {
-        saveGameOnHistory(turn, elapsedTime, *winner, isComputer, winType);
-        gameRunning = false;
-        drawGameOver(winner, display, font, currentState, isComputer);
-      }
-    }
-  }
-}
-
-void drawGames(Game *games, int gameCount, ALLEGRO_FONT **font, bool isComputer, int longestGame, int shortestGame, int scrollOffset)
+void drawHistoryGames(Game *games, int gameCount, ALLEGRO_FONT **font, bool isComputer, int longestGame, int shortestGame, int scrollOffset)
 {
   char longest[100];
   sprintf(longest, "Game %d: %.f Seconds", longestGame + 1, games[longestGame].time);
@@ -1956,7 +1954,7 @@ int handleHistoryEvents(struct text texts[], ALLEGRO_DISPLAY **display, ALLEGRO_
   return -1;
 }
 
-void showHistory(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, GameState *currentState, Game *games, int gameCount)
+void history(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, GameState *currentState, Game *games, int gameCount)
 {
   bool historyRunning = true;
   struct text texts[1] = {0};
@@ -2012,8 +2010,8 @@ void showHistory(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, GameState *curr
     al_clear_to_color(al_map_rgb(255, 255, 255));
     drawText(texts, sizeof(texts) / sizeof(texts[0]));
 
-    drawGames(computerGames, computers, font, true, longestComputerGame, shortestComputerGame, scrollOffset);
-    drawGames(playerGames, players, font, false, longestPlayerGame, shortestPlayerGame, scrollOffset);
+    drawHistoryGames(computerGames, computers, font, true, longestComputerGame, shortestComputerGame, scrollOffset);
+    drawHistoryGames(playerGames, players, font, false, longestPlayerGame, shortestPlayerGame, scrollOffset);
 
     handleHistoryEvents(texts, display, font, &historyRunning, currentState, &scrollOffset, maxScroll);
 
@@ -2050,25 +2048,25 @@ int main()
       menu(&display, &font, &smallFont, &currentState, &running);
       break;
     case HELP:
-      helpView(&display, &font, &smallFont, &currentState, &running);
+      help(&display, &font, &smallFont, &currentState, &running);
       break;
     case GAME:
-      startGame(&display, &font, &running, &currentState, turn, pieces, board, 0, false, &winner);
+      game(&display, &font, &running, &currentState, turn, pieces, board, 0, false, &winner);
       break;
     case GAME_COMPUTER:
-      startGame(&display, &font, &running, &currentState, turn, pieces, board, 0, true, &winner);
+      game(&display, &font, &running, &currentState, turn, pieces, board, 0, true, &winner);
       break;
     case LOAD_GAME:
       loadGameState(board, &turn, "game_save.txt", &pieces, &savedTime);
-      startGame(&display, &font, &running, &currentState, turn, pieces, board, savedTime, false, &winner);
+      game(&display, &font, &running, &currentState, turn, pieces, board, savedTime, false, &winner);
       break;
     case LOAD_GAME_COMPUTER:
       loadGameState(board, &turn, "game_save_computer.txt", &pieces, &savedTime);
-      startGame(&display, &font, &running, &currentState, turn, pieces, board, savedTime, true, &winner);
+      game(&display, &font, &running, &currentState, turn, pieces, board, savedTime, true, &winner);
       break;
     case HISTORY:
       games = readGameHistory("history.txt", &gameCount);
-      showHistory(&display, &font, &currentState, games, gameCount);
+      history(&display, &font, &currentState, games, gameCount);
       break;
     }
 
