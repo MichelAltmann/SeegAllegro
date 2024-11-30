@@ -46,6 +46,7 @@ struct tile
   bool hover;
   bool click;
   bool positionable;
+  bool canEat;
   int piece;
 };
 
@@ -122,6 +123,25 @@ Game *readGameHistory(const char *filename, int *gameCount)
 
   fclose(file);
   return games;
+}
+
+struct tile createTile(int id, int x, int y, int x1, int y1, int x2, int y2, ALLEGRO_COLOR color)
+{
+  struct tile t;
+  t.id = id;
+  t.x = x;
+  t.y = y;
+  t.x1 = x1;
+  t.y1 = y1;
+  t.x2 = x2;
+  t.y2 = y2;
+  t.color = color;
+  t.hover = false;
+  t.click = false;
+  t.positionable = false;
+  t.canEat = false;
+  t.piece = 0;
+  return t;
 }
 
 bool initializeAllegro(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, ALLEGRO_FONT **smallFont)
@@ -590,24 +610,6 @@ void drawGameOver(int *winner, ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, G
   *winner = 0;
 }
 
-struct tile createTile(int id, int x, int y, int x1, int y1, int x2, int y2, ALLEGRO_COLOR color)
-{
-  struct tile t;
-  t.id = id;
-  t.x = x;
-  t.y = y;
-  t.x1 = x1;
-  t.y1 = y1;
-  t.x2 = x2;
-  t.y2 = y2;
-  t.color = color;
-  t.hover = false;
-  t.click = false;
-  t.positionable = false;
-  t.piece = 0;
-  return t;
-}
-
 void initializeTiles(struct tile tile[5][5])
 {
   int id = 0;
@@ -636,11 +638,18 @@ void drawTile(struct tile tile, int turn)
 {
   if (tile.hover)
   {
-    al_draw_filled_rectangle(tile.x1, tile.y1, tile.x2, tile.y2, turn % 2 == 0 ? HOVER: HOVER2);
+    al_draw_filled_rectangle(tile.x1, tile.y1, tile.x2, tile.y2, turn % 2 == 0 ? HOVER : HOVER2);
   }
   else if (tile.positionable)
   {
-    al_draw_filled_rectangle(tile.x1, tile.y1, tile.x2, tile.y2, al_map_rgba(0, 255, 0, 100));
+    if (tile.canEat)
+    {
+      al_draw_filled_rectangle(tile.x1, tile.y1, tile.x2, tile.y2, al_map_rgb(200, 200, 0));
+    }
+    else
+    {
+      al_draw_filled_rectangle(tile.x1, tile.y1, tile.x2, tile.y2, al_map_rgba(0, 255, 0, 100));
+    }
   }
   else
   {
@@ -777,26 +786,86 @@ bool isValidPosition(int x, int y, struct tile board[5][5], int piece)
   return (x >= 0 && x < 5 && y >= 0 && y < 5) && (board[x][y].piece != piece);
 }
 
+int checkEatCoordinates(struct tile board[5][5], int x, int y, int playerPiece, int opponentPiece, Coordinates eatenCoords[4])
+{
+  int count = 0;
+
+  if (x + 2 < 5)
+  {
+    if (board[x + 1][y].piece == opponentPiece && board[x + 1][y].id != 12 && board[x + 2][y].piece == playerPiece)
+    {
+      eatenCoords[count].x = x + 1;
+      eatenCoords[count].y = y;
+      count++;
+    }
+  }
+
+  if (x - 2 >= 0)
+  {
+    if (board[x - 1][y].piece == opponentPiece && board[x - 1][y].id != 12 && board[x - 2][y].piece == playerPiece)
+    {
+      eatenCoords[count].x = x - 1;
+      eatenCoords[count].y = y;
+      count++;
+    }
+  }
+
+  if (y + 2 < 5)
+  {
+    if (board[x][y + 1].piece == opponentPiece && board[x][y + 1].id != 12 && board[x][y + 2].piece == playerPiece)
+    {
+      eatenCoords[count].x = x;
+      eatenCoords[count].y = y + 1;
+      count++;
+    }
+  }
+
+  if (y - 2 >= 0)
+  {
+    if (board[x][y - 1].piece == opponentPiece && board[x][y - 1].id != 12 && board[x][y - 2].piece == playerPiece)
+    {
+      eatenCoords[count].x = x;
+      eatenCoords[count].y = y - 1;
+      count++;
+    }
+  }
+
+  return count;
+}
+
 void setTilePossibility(struct tile board[5][5], int i, int j, bool hasPossibilities)
 {
   bool tileUp, tileDown, tileLeft, tileRight;
   clearPositionable(board);
+  int opponentPiece = board[i][j].piece == 1 ? 2 : 1;
   if (checkTilePossibilities(board, i, j, &tileUp, &tileDown, &tileLeft, &tileRight) && hasPossibilities)
   {
     if (j - 1 >= 0)
     {
+      Coordinates eatenCoords[4];
+      int count = checkEatCoordinates(board, i, j - 1, board[i][j].piece, opponentPiece, eatenCoords);
+      board[i][j - 1].canEat = count > 0;
       board[i][j - 1].positionable = tileUp;
     }
     if (j + 1 < 5)
     {
+      Coordinates eatenCoords[4];
+      int count = checkEatCoordinates(board, i, j + 1, board[i][j].piece, opponentPiece, eatenCoords);
+      board[i][j + 1].canEat = count > 0;
       board[i][j + 1].positionable = tileDown;
     }
     if (i - 1 >= 0)
     {
+      Coordinates eatenCoords[4];
+      int count = checkEatCoordinates(board, i - 1, j, board[i][j].piece, opponentPiece, eatenCoords);
+      board[i - 1][j].canEat = count > 0;
       board[i - 1][j].positionable = tileLeft;
     }
     if (i + 1 < 5)
     {
+      Coordinates eatenCoords[4];
+      int count = checkEatCoordinates(board, i + 1, j, board[i][j].piece, opponentPiece, eatenCoords);
+      board[i + 1][j].canEat = count > 0;
       board[i + 1][j].positionable = tileRight;
     }
   }
@@ -864,53 +933,6 @@ bool eatPieces(struct tile board[5][5], Coordinates eatenCoords[4], int count)
     return true;
   }
   return false;
-}
-
-int checkEatCoordinates(struct tile board[5][5], int x, int y, int playerPiece, int opponentPiece, Coordinates eatenCoords[4])
-{
-  int count = 0;
-
-  if (x + 2 < 5)
-  {
-    if (board[x + 1][y].piece == opponentPiece && board[x + 1][y].id != 12 && board[x + 2][y].piece == playerPiece)
-    {
-      eatenCoords[count].x = x + 1;
-      eatenCoords[count].y = y;
-      count++;
-    }
-  }
-
-  if (x - 2 >= 0)
-  {
-    if (board[x - 1][y].piece == opponentPiece && board[x - 1][y].id != 12 && board[x - 2][y].piece == playerPiece)
-    {
-      eatenCoords[count].x = x - 1;
-      eatenCoords[count].y = y;
-      count++;
-    }
-  }
-
-  if (y + 2 < 5)
-  {
-    if (board[x][y + 1].piece == opponentPiece && board[x][y + 1].id != 12 && board[x][y + 2].piece == playerPiece)
-    {
-      eatenCoords[count].x = x;
-      eatenCoords[count].y = y + 1;
-      count++;
-    }
-  }
-
-  if (y - 2 >= 0)
-  {
-    if (board[x][y - 1].piece == opponentPiece && board[x][y - 1].id != 12 && board[x][y - 2].piece == playerPiece)
-    {
-      eatenCoords[count].x = x;
-      eatenCoords[count].y = y - 1;
-      count++;
-    }
-  }
-
-  return count;
 }
 
 void checkSmallWinPieces(int upPiece1, int upPiece2, int downPiece1, int downPiece2, bool *running, int turn, bool isXwin, int *winner, int *winType)
@@ -1224,9 +1246,13 @@ bool onMouseClickTile(struct tile board[5][5], int mouse_x, int mouse_y, bool *r
             if (left || right || up || down)
             {
               board[i + 1][j].positionable = right;
+              board[i + 1][j].canEat = right;
               board[i - 1][j].positionable = left;
+              board[i - 1][j].canEat = left;
               board[i][j + 1].positionable = down;
+              board[i][j + 1].canEat = down;
               board[i][j - 1].positionable = up;
+              board[i][j - 1].canEat = up;
               *selectedTile = board[i][j];
               *isConsecutiveTurn = true;
               return false;
@@ -1482,6 +1508,8 @@ void game(ALLEGRO_DISPLAY **display, ALLEGRO_FONT **font, bool *running, GameSta
       al_draw_textf(*font, turn % 2 == 0 ? al_map_rgb(200, 0, 0) : al_map_rgb(0, 0, 200), al_get_text_width(*font, "Turn: "), y, 0, "%s", turn % 2 == 0 ? "Player 1" : "Player 2");
       y += al_get_font_line_height(*font);
       al_draw_textf(*font, al_map_rgb(0, 0, 0), 10, y, 0, "Time: %.0f", currentTime);
+      y += al_get_font_line_height(*font);
+      al_draw_textf(*font, al_map_rgb(0, 0, 0), 10, y, 0, turn < 12 ? "Placement Phase" : "Movement Phase");
 
       al_flip_display();
 
